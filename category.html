@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>0x06k // Category Archive</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --obsidian: #0a0a0f;
+            --ghost: #e8e8f0;
+            --blood: #9d00ff;
+            --amber: #00ffcc;
+            --gray-1: #1a1a2e;
+            --gray-2: #252541;
+            --gray-3: #3a3a5c;
+            --cyan: #00d4ff;
+            --green: #39ff14;
+            --orange: #ff6b35;
+            --magenta: #ff00ff;
+        }
+
+        body {
+            background: var(--obsidian);
+            color: var(--ghost);
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .page-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 40px;
+            align-items: start;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: sticky;
+            top: 40px;
+        }
+
+        .profile-card {
+            background: var(--gray-1);
+            border: 1px solid var(--gray-3);
+            border-left: 4px solid var(--blood);
+            padding: 30px;
+            animation: fadeInLeft 0.6s ease-out;
+        }
+
+        .profile-image-container {
+            width: 100%;
+            aspect-ratio: 1;
+            border: 4px solid var(--blood);
+            border-radius: 50%;
+            overflow: hidden;
+            margin-bottom: 25px;
+            box-shadow: 0 0 20px rgba(157, 0, 255, 0.3);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .profile-image-container:hover {
+            border-color: var(--amber);
+            box-shadow: 0 0 35px rgba(0, 255, 204, 0.4);
+            transform: scale(1.05);
+        }
+
+        .profile-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: grayscale(100%) brightness(0.9);
+            transition: all 0.4s;
+        }
+
+        .profile-image-container:hover .profile-image {
+            filter: grayscale(0%) brightness(1);
+        }
+
+        .profile-name {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--ghost);
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+        }
+
+        .profile-username {
+            font-size: 16px;
+            color: var(--blood);
+            margin-bottom: 20px;
+        }
+
+        .profile-bio {
+            font-size: 13px;
+            color: #999;
+            line-height: 1.8;
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid var(--gray-3);
+        }
+
+        .profile-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid var(--gray-3);
+        }
+
+        .stat-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--amber);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: var(--gray-3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .social-link {
+            width: 42px;
+            height: 42px;
+            background: var(--gray-2);
+            border: 1px solid var(--gray-3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--ghost);
+            text-decoration: none;
+            font-size: 18px;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .social-link::before {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(0, 255, 204, 0.1);
+            transition: width 0.3s, height 0.3s;
+        }
+
+        .social-link:hover::before {
+            width: 100%;
+            height: 100%;
+        }
+
+        .social-link:hover {
+            border-color: var(--amber);
+            color: var(--amber);
+            transform: translateY(-3px) rotate(5deg);
+            box-shadow: 0 5px 15px rgba(0, 255, 204, 0.3);
+        }
+
+        /* Main Content */
+        .main-content {
+            animation: fadeInUp 0.6s ease-out 0.2s backwards;
+        }
+
+        .search-section {
+            margin-bottom: 40px;
+        }
+
+        .search-wrapper {
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 18px 60px 18px 50px;
+            background: var(--gray-1);
+            border: 2px solid var(--gray-3);
+            color: var(--ghost);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: var(--blood);
+            box-shadow: 0 0 30px rgba(157, 0, 255, 0.3);
+            transform: translateY(-2px);
+            background: var(--gray-2);
+        }
+
+        .search-input::placeholder {
+            color: var(--gray-3);
+            transition: all 0.3s;
+        }
+
+        .search-input:focus::placeholder {
+            opacity: 0;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--blood);
+            font-size: 18px;
+            pointer-events: none;
+            transition: all 0.4s;
+        }
+
+        .search-input:focus ~ .search-icon {
+            color: var(--amber);
+            transform: translateY(-50%) scale(1.2);
+        }
+
+        .clear-search {
+            position: absolute;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%) scale(0);
+            background: none;
+            border: none;
+            color: var(--gray-3);
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .clear-search.visible {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateY(-50%) scale(1);
+        }
+
+        .clear-search:hover {
+            color: var(--blood);
+            transform: translateY(-50%) scale(1.3) rotate(90deg);
+        }
+
+        /* Search Suggestions */
+        .search-suggestions {
+            position: absolute;
+            top: calc(100% + 10px);
+            left: 0;
+            right: 0;
+            background: var(--gray-1);
+            border: 2px solid var(--blood);
+            max-height: 500px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(157, 0, 255, 0.3);
+        }
+
+        .search-suggestions.active {
+            display: block;
+            animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .suggestion-group {
+            border-bottom: 1px solid var(--gray-3);
+            animation: fadeInUp 0.3s ease-out backwards;
+        }
+
+        .suggestion-group:nth-child(1) { animation-delay: 0.05s; }
+        .suggestion-group:nth-child(2) { animation-delay: 0.1s; }
+        .suggestion-group:nth-child(3) { animation-delay: 0.15s; }
+        .suggestion-group:nth-child(4) { animation-delay: 0.2s; }
+        .suggestion-group:nth-child(5) { animation-delay: 0.25s; }
+
+        .suggestion-group:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-category-header {
+            padding: 15px 20px;
+            background: var(--gray-2);
+            color: var(--amber);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .suggestion-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-left: 3px solid transparent;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .suggestion-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(157, 0, 255, 0.1), transparent);
+            transition: width 0.3s;
+        }
+
+        .suggestion-item:hover::before {
+            width: 100%;
+        }
+
+        .suggestion-item:hover {
+            background: var(--gray-2);
+            border-left-color: var(--blood);
+            transform: translateX(8px);
+        }
+
+        .suggestion-title {
+            color: var(--ghost);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .suggestion-highlight {
+            background: rgba(157, 0, 255, 0.3);
+            color: var(--amber);
+            padding: 0 2px;
+        }
+
+        .suggestion-meta {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            font-size: 10px;
+            color: #666;
+        }
+
+        .suggestion-badge {
+            font-size: 9px;
+            padding: 2px 8px;
+            background: rgba(157, 0, 255, 0.1);
+            border: 1px solid var(--blood);
+            border-radius: 2px;
+            text-transform: uppercase;
+            color: var(--blood);
+        }
+
+        .no-results {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--gray-3);
+        }
+
+        .no-results-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+
+        .no-results-text {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Category Header */
+        .category-header {
+            margin-bottom: 40px;
+            padding: 40px;
+            background: var(--gray-1);
+            border: 1px solid var(--gray-3);
+            border-left: 4px solid var(--blood);
+        }
+
+        .category-breadcrumb {
+            font-size: 11px;
+            color: var(--gray-3);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+        }
+
+        .category-title {
+            font-size: 38px;
+            color: var(--ghost);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .category-icon {
+            font-size: 34px;
+            color: var(--blood);
+        }
+
+        .category-description {
+            color: #999;
+            font-size: 14px;
+            line-height: 1.8;
+            margin-bottom: 25px;
+        }
+
+        .category-stats {
+            display: flex;
+            gap: 30px;
+        }
+
+        .category-stat {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+        }
+
+        .stat-number-large {
+            font-size: 24px;
+            color: var(--amber);
+            font-weight: 700;
+        }
+
+        .stat-label-small {
+            color: var(--gray-3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Category Navigation Tabs */
+        .category-nav {
+            margin-bottom: 40px;
+        }
+
+        .category-nav-label {
+            color: var(--blood);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .category-nav-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--gray-3);
+        }
+
+        .category-tabs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .category-tab {
+            background: var(--gray-1);
+            border: 1px solid var(--gray-3);
+            color: var(--ghost);
+            padding: 12px 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.4s ease-out backwards;
+        }
+
+        .category-tab:nth-child(1) { animation-delay: 0.05s; }
+        .category-tab:nth-child(2) { animation-delay: 0.1s; }
+        .category-tab:nth-child(3) { animation-delay: 0.15s; }
+        .category-tab:nth-child(4) { animation-delay: 0.2s; }
+        .category-tab:nth-child(5) { animation-delay: 0.25s; }
+
+        .category-tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 204, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .category-tab:hover::before {
+            left: 100%;
+        }
+
+        .category-tab:hover {
+            border-color: var(--amber);
+            color: var(--amber);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 255, 204, 0.2);
+        }
+
+        .category-tab.active {
+            background: var(--blood);
+            border-color: var(--blood);
+            color: var(--ghost);
+            box-shadow: 0 0 15px rgba(157, 0, 255, 0.3);
+        }
+
+        .category-tab.active::after {
+            content: '►';
+            margin-left: 8px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: translateX(0); }
+            50% { opacity: 0.5; transform: translateX(3px); }
+        }
+
+        .category-tab-count {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 6px;
+            background: rgba(0, 255, 204, 0.1);
+            border: 1px solid var(--amber);
+            border-radius: 2px;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--amber);
+        }
+
+        .category-tab.active .category-tab-count {
+            background: rgba(232, 232, 240, 0.2);
+            border-color: var(--ghost);
+            color: var(--ghost);
+        }
+
+        /* Sort Filter Section */
+        .filter-section {
+            margin-bottom: 40px;
+            animation: fadeInUp 0.6s ease-out 0.35s backwards;
+        }
+
+        .filter-label {
+            color: var(--amber);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--gray-3);
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-tab {
+            background: var(--gray-1);
+            border: 1px solid var(--gray-3);
+            color: var(--ghost);
+            padding: 10px 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.4s ease-out backwards;
+        }
+
+        .filter-tab:nth-child(1) { animation-delay: 0.1s; }
+        .filter-tab:nth-child(2) { animation-delay: 0.15s; }
+        .filter-tab:nth-child(3) { animation-delay: 0.2s; }
+
+        .filter-tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 204, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .filter-tab:hover::before {
+            left: 100%;
+        }
+
+        .filter-tab:hover {
+            border-color: var(--amber);
+            color: var(--amber);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 255, 204, 0.2);
+        }
+
+        .filter-tab.active {
+            background: var(--amber);
+            border-color: var(--amber);
+            color: var(--obsidian);
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+            font-weight: 700;
+        }
+
+        /* Posts Grid */
+        .posts-grid {
+            display: grid;
+            gap: 25px;
+        }
+
+        .blog-item {
+            background: var(--gray-1);
+            border: 1px solid var(--gray-3);
+            border-left: 2px solid var(--blood);
+            padding: 25px;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.4s ease-out backwards;
+        }
+
+        .blog-item:nth-child(1) { animation-delay: 0.1s; }
+        .blog-item:nth-child(2) { animation-delay: 0.15s; }
+        .blog-item:nth-child(3) { animation-delay: 0.2s; }
+        .blog-item:nth-child(4) { animation-delay: 0.25s; }
+        .blog-item:nth-child(5) { animation-delay: 0.3s; }
+        .blog-item:nth-child(6) { animation-delay: 0.35s; }
+        .blog-item:nth-child(7) { animation-delay: 0.4s; }
+        .blog-item:nth-child(8) { animation-delay: 0.45s; }
+        .blog-item:nth-child(9) { animation-delay: 0.5s; }
+        .blog-item:nth-child(10) { animation-delay: 0.55s; }
+
+        .blog-item::before {
+            content: '0x' attr(data-id);
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 11px;
+            color: var(--gray-3);
+            transition: all 0.3s;
+        }
+
+        .blog-item::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, var(--blood), var(--amber));
+            transform: scaleY(0);
+            transition: transform 0.3s;
+        }
+
+        .blog-item:hover::after {
+            transform: scaleY(1);
+        }
+
+        .blog-item:hover::before {
+            color: var(--amber);
+            transform: scale(1.2);
+        }
+
+        .blog-item:hover {
+            border-color: var(--amber);
+            background: var(--gray-2);
+            transform: translateX(10px);
+            box-shadow: -5px 0 0 var(--amber), 0 5px 15px rgba(0, 255, 204, 0.2);
+        }
+
+        .blog-item:hover .blog-item-title {
+            color: var(--amber);
+        }
+
+        .blog-item-header {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .blog-date {
+            color: #666;
+            font-size: 11px;
+        }
+
+        .blog-badge {
+            font-size: 10px;
+            padding: 3px 10px;
+            background: rgba(157, 0, 255, 0.1);
+            border: 1px solid;
+            border-radius: 2px;
+            text-transform: uppercase;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .blog-badge.reveng { color: var(--cyan); border-color: var(--cyan); }
+        .blog-badge.exploit { color: var(--blood); border-color: var(--blood); }
+        .blog-badge.maldev { color: var(--magenta); border-color: var(--magenta); }
+        .blog-badge.pentest { color: var(--green); border-color: var(--green); }
+        .blog-badge.threathunt { color: var(--cyan); border-color: var(--cyan); }
+        .blog-badge.incidentresponse { color: var(--orange); border-color: var(--orange); }
+        .blog-badge.siem { color: var(--amber); border-color: var(--amber); }
+        .blog-badge.malwareanalysis { color: var(--magenta); border-color: var(--magenta); }
+        .blog-badge.picoctf { color: var(--amber); border-color: var(--amber); }
+        .blog-badge.htb { color: var(--green); border-color: var(--green); }
+        .blog-badge.thm { color: var(--cyan); border-color: var(--cyan); }
+        .blog-badge.majorctf { color: var(--blood); border-color: var(--blood); }
+        .blog-badge.sectools { color: var(--orange); border-color: var(--orange); }
+        .blog-badge.malware { color: var(--magenta); border-color: var(--magenta); }
+        .blog-badge.webapps { color: var(--amber); border-color: var(--amber); }
+        .blog-badge.opensource { color: var(--green); border-color: var(--green); }
+        .blog-badge.learning { color: var(--cyan); border-color: var(--cyan); }
+
+        .blog-item-title {
+            color: var(--ghost);
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+
+        .blog-item-excerpt {
+            color: #999;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .blog-item-link {
+            color: var(--amber);
+            font-size: 11px;
+            margin-top: 12px;
+            display: inline-block;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .blog-item-link:hover {
+            transform: translateX(5px);
+        }
+
+        /* Empty State */
+        .empty-state {
+            padding: 80px 20px;
+            text-align: center;
+            background: rgba(26, 26, 46, 0.4);
+            border: 1px solid var(--gray-3);
+            border-left: 4px solid var(--gray-3);
+        }
+
+        .empty-brackets {
+            font-size: 80px;
+            color: var(--gray-2);
+            font-weight: 700;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .empty-message {
+            color: var(--gray-3);
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        /* Scrollbar */
+        .search-suggestions::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .search-suggestions::-webkit-scrollbar-track {
+            background: var(--gray-1);
+        }
+
+        .search-suggestions::-webkit-scrollbar-thumb {
+            background: var(--blood);
+            border-radius: 4px;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .page-layout {
+                grid-template-columns: 280px 1fr;
+                gap: 30px;
+            }
+
+            .profile-card {
+                padding: 25px;
+            }
+
+            .category-title {
+                font-size: 32px;
+            }
+        }
+    
+    /* Hide mobile elements by default on Desktop */
+    .mobile-header, 
+    .mobile-nav-toggle, 
+    .sidebar-overlay {
+        display: none !important;
+    }
+    @media (max-width: 768px) {
+    /* The Mobile Header - This scrolls UP and away */
+    .mobile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        background: var(--gray-1);
+        border-bottom: 1px solid var(--blood);
+        width: 100%;
+    }
+    body.sidebar-active .mobile-nav-toggle {
+        position: fixed;
+        top: 15px;
+        right: 20px; /* Moves it to the side for easier clicking */
+    }
+    .mobile-nav-toggle {
+        display: flex !important;
+        position: relative; /* It stays in the header, so it scrolls away */
+        z-index: 10000; /* Higher than the sidebar's 9999 */
+        background: none;
+        border: 1px solid var(--blood);
+        color: var(--amber);
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 1.2rem;
+    }
+
+    /* The Sidebar - Optimized for 480px */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: -300px; /* Start hidden */
+        transition: transform 0.3s ease-in-out;
+        width: 80%; /* Good width for 480px */
+        max-width: 300px;
+        height: 100vh;
+        z-index: 9999;
+        background: rgba(10, 10, 15, 0.98);
+        backdrop-filter: blur(10px);
+        border-right: 1px solid var(--blood);
+        transition: 0.3s ease-in-out;
+        
+        /* THE SCROLL FIX: Allows swiping to reach Home/Mail */
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        padding: 60px 25px;
+        
+    }
+
+    .sidebar.active {
+        transform: translateX(300px); /* Slides in */
+    }
+    /* Social Links container at the bottom of the sidebar */
+    .social-links {
+        margin-top: auto; /* Pushes icons to bottom */
+        padding-top: 30px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+    }
+
+    .page-layout {
+        grid-template-columns: 1fr;
+    }
+    
+}
+
+
+    </style>
+</head>
+<body>
+    <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle Sidebar">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        
+    <div class="container">
+        <div class="page-layout">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="profile-card">
+                    <div class="profile-image-container">
+                        <img src="mikasa.jpeg" class="profile-image" alt="Profile">
+                    </div>
+                    
+                    <h1 class="profile-name">0x06k</h1>
+                    <p class="profile-username">@0x06k</p>
+                    
+                    <p class="profile-bio">
+                        19 y/o cybersecurity student in 6th semester, 
+                        exploit development, and reverse engineering. Passionate about red team operations 
+                        and malware analysis.
+                    </p>
+                    
+                    <div class="profile-stats">
+                        <div class="stat-item">
+                            <span class="stat-number" id="totalPosts">0</span>
+                            <span class="stat-label">Posts</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="totalCategories">0</span>
+                            <span class="stat-label">Categories</span>
+                        </div>
+                    </div>
+                    
+                    <div class="social-links">
+                        <a href="https://github.com/0x06k" class="social-link" title="GitHub" target="_blank">
+                            <i class="fab fa-github"></i>
+                        </a>
+                        <a href="https://linkedin.com/in/0x06k" class="social-link" title="LinkedIn" target="_blank">
+                            <i class="fab fa-linkedin-in"></i>
+                        </a>
+                        <a href="https://x.com/0x06k" class="social-link" title="Twitter" target="_blank">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="https://discord.com/users/1451053940421558272" class="social-link" title="Discord" target="_blank">
+                            <i class="fab fa-discord"></i>
+                        </a>
+                        <a href="mailto:kabeercybersec@gmail.com" class="social-link" title="Email">
+                            <i class="fas fa-envelope"></i>
+                        </a>
+                        <a href="index.html" class="social-link" title="Home" style="background: var(--blood); border-color: var(--blood);">
+                            <i class="fas fa-home"></i>
+                        </a>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <!-- Search Bar -->
+                <div class="search-section">
+                    <div class="search-wrapper">
+                        <i class="fas fa-search search-icon"></i>
+                        <input 
+                            type="text" 
+                            class="search-input" 
+                            id="searchInput"
+                            placeholder="Search all posts across categories..."
+                        >
+                        <button class="clear-search" id="clearSearch">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <div class="search-suggestions" id="searchSuggestions"></div>
+                    </div>
+                </div>
+
+                <!-- Category Header -->
+                <div class="category-header" id="categoryHeader">
+                    <!-- Will be loaded dynamically -->
+                </div>
+
+                <!-- Category Navigation -->
+                <div class="category-nav">
+                    <div class="category-nav-label">[CATEGORY_FILTER]</div>
+                    <div class="category-tabs" id="categoryTabs">
+                        <!-- Will be loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- Sort/Filter Buttons -->
+                <div class="filter-section">
+                    <div class="filter-label">[SORT_OPTIONS]</div>
+                    <div class="filter-tabs" id="filterTabs">
+                        <!-- Will be loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- Posts Grid -->
+                <div class="posts-grid" id="postsGrid">
+                    <!-- Posts will be loaded dynamically -->
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Load posts from external file -->
+    <script src="posts.js"></script>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentCategory = urlParams.get('category') || 'all';
+
+        // Section configuration matching index.html
+        const sectionConfig = {
+            redteam: {
+                title: 'Red Team Operations',
+                categories: ['reveng', 'exploit', 'maldev', 'pentest']
+            },
+            blueteam: {
+                title: 'Blue Team Operations',
+                categories: ['threathunt', 'incidentresponse', 'siem', 'malwareanalysis']
+            },
+            ctf: {
+                title: 'CTF Writeups',
+                categories: ['picoctf', 'htb', 'thm', 'majorctf']
+            },
+            projects: {
+                title: 'Projects',
+                categories: ['sectools', 'malware', 'webapps', 'opensource', 'learning']
+            }
+        };
+
+        const categoryIcons = {
+            reveng: 'fa-bug', exploit: 'fa-bomb', maldev: 'fa-virus', pentest: 'fa-user-ninja',
+            threathunt: 'fa-crosshairs', incidentresponse: 'fa-fire-extinguisher', 
+            siem: 'fa-chart-line', malwareanalysis: 'fa-microscope', picoctf: 'fa-flag',
+            htb: 'fa-cube', thm: 'fa-graduation-cap', majorctf: 'fa-trophy',
+            sectools: 'fa-tools', malware: 'fa-flask', webapps: 'fa-globe',
+            opensource: 'fa-code-branch', learning: 'fa-laptop-code'
+        };
+
+        let searchTimeout;
+        let allPostsFlat = [];
+        let currentSortFilter = 'newest'; // 'newest', 'oldest'
+        let currentCategoryFilter = 'all'; // 'all' or individual category key (e.g., 'exploit', 'maldev')
+        
+        function initializePage() {
+            // 1. Flatten all posts
+            allPostsFlat = [];
+            Object.keys(allPosts).forEach(cat => {
+                allPosts[cat].forEach(post => {
+                    allPostsFlat.push({
+                        ...post,
+                        category: cat,
+                        categoryTitle: categoryInfo[cat].title,
+                        section: categoryInfo[cat].section
+                    });
+                });
+            });
+
+            // 2. Set initial category filter from URL parameter
+            if (currentCategory && currentCategory !== 'all' && allPosts[currentCategory]) {
+                currentCategoryFilter = currentCategory;
+            } else {
+                currentCategoryFilter = 'all';
+                currentCategory = 'all';
+            }
+
+            // 3. Run UI initializations
+            updateSidebarStats();
+            loadCategoryHeader();
+            generateCategoryTabs();
+            generateFilterTabs();
+            loadPosts();
+            setupSearch();
+            
+            // 4. NEW: Initialize the mobile navigation toggle
+            setupMobileNav();
+        }
+
+        function setupMobileNav() {
+            const btn = document.getElementById('mobileNavToggle');
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const icon = btn.querySelector('i');
+
+            btn.onclick = (e) => {
+                // Prevent event from bubbling
+                e.stopPropagation();
+                
+                const isActive = sidebar.classList.toggle('active');
+                overlay.classList.toggle('active');
+                document.body.classList.toggle('sidebar-active');
+
+                // CHANGE ICON: Bars to X
+                if (isActive) {
+                    icon.classList.remove('fa-bars');
+                    icon.classList.add('fa-times');
+                } else {
+                    icon.classList.remove('fa-times');
+                    icon.classList.add('fa-bars');
+                }
+            };
+
+            // Close sidebar if user clicks the overlay (the dark blurred area)
+            overlay.onclick = () => {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.classList.remove('sidebar-active');
+                icon.classList.replace('fa-times', 'fa-bars');
+            };
+        }
+        
+
+        function updateSidebarStats() {
+            const totalPosts = Object.values(allPosts).reduce((sum, arr) => sum + arr.length, 0);
+            const totalCategories = Object.keys(allPosts).filter(cat => allPosts[cat].length > 0).length;
+            
+            document.getElementById('totalPosts').textContent = totalPosts;
+            document.getElementById('totalCategories').textContent = totalCategories + "/16";
+        }
+
+        function loadCategoryHeader() {
+            const headerHTML = `
+                <div class="category-breadcrumb">
+                    ALL CATEGORIES / ARCHIVE
+                </div>
+                <h1 class="category-title">
+                    <i class="fas fa-folder-open category-icon"></i>
+                    Blog Archive
+                </h1>
+                <p class="category-description">
+                    Browse all posts across all categories. Use the filters below to narrow down your search.
+                </p>
+                <div class="category-stats">
+                    <div class="category-stat">
+                        <span class="stat-number-large">${allPostsFlat.length}</span>
+                        <span class="stat-label-small">Total Posts</span>
+                    </div>
+                    <div class="category-stat">
+                        <span class="stat-number-large">${Object.keys(allPosts).length}</span>
+                        <span class="stat-label-small">Categories</span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('categoryHeader').innerHTML = headerHTML;
+        }
+
+        function generateCategoryTabs() {
+            const categoryTabs = document.getElementById('categoryTabs');
+            
+            // Calculate total posts
+            const totalPosts = allPostsFlat.length;
+
+            let tabsHTML = `
+                <button class="category-tab ${currentCategoryFilter === 'all' ? 'active' : ''}" onclick="applyCategoryFilter('all')">
+                    All Categories
+                    <span class="category-tab-count">${totalPosts}</span>
+                </button>
+            `;
+
+            // Add individual category tabs
+            Object.keys(categoryInfo).forEach(category => {
+                const info = categoryInfo[category];
+                const count = allPosts[category] ? allPosts[category].length : 0;
+                
+                if (count > 0) { // Only show categories with posts
+                    tabsHTML += `
+                        <button class="category-tab ${currentCategoryFilter === category ? 'active' : ''}" onclick="applyCategoryFilter('${category}')">
+                            ${info.title}
+                            <span class="category-tab-count">${count}</span>
+                        </button>
+                    `;
+                }
+            });
+
+            categoryTabs.innerHTML = tabsHTML;
+        }
+
+        function generateFilterTabs() {
+            const filterTabs = document.getElementById('filterTabs');
+
+            filterTabs.innerHTML = `
+                <button class="filter-tab ${currentSortFilter === 'newest' ? 'active' : ''}" onclick="applySortFilter('newest')">
+                    Newest First
+                </button>
+                <button class="filter-tab ${currentSortFilter === 'oldest' ? 'active' : ''}" onclick="applySortFilter('oldest')">
+                    Oldest First
+                </button>
+            `;
+        }
+
+        function applyCategoryFilter(filter) {
+            currentCategoryFilter = filter;
+            
+            // Update active state
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Reload posts with new filter
+            loadPosts();
+        }
+
+        function applySortFilter(filter) {
+            currentSortFilter = filter;
+            
+            // Update active state
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Reload posts with new filter
+            loadPosts();
+        }
+
+        function loadPosts(searchPosts = null) {
+            let postsToDisplay = searchPosts || allPostsFlat;
+            const grid = document.getElementById('postsGrid');
+
+            // Apply category filter if not searching
+            if (!searchPosts && currentCategoryFilter !== 'all') {
+                postsToDisplay = postsToDisplay.filter(post => 
+                    post.category === currentCategoryFilter
+                );
+            }
+
+            if (postsToDisplay.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-brackets">[!]</div>
+                        <div class="empty-message">NO POSTS FOUND</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Apply sorting
+            if (currentSortFilter === 'oldest') {
+                postsToDisplay = [...postsToDisplay].sort((a, b) => 
+                    new Date(a.date) - new Date(b.date)
+                );
+            } else {
+                postsToDisplay = [...postsToDisplay].sort((a, b) => 
+                    new Date(b.date) - new Date(a.date)
+                );
+            }
+
+            grid.innerHTML = postsToDisplay.map((post, index) => `
+            <div class="blog-item" 
+                data-id="${index.toString(16).padStart(2, '0')}"
+                onclick="window.location.href='${post.link}'"
+                style="cursor: pointer;">
+                <div class="blog-item-header">
+                    <span class="blog-date">[${post.date}]</span>
+                    <span class="blog-badge ${post.category}">
+                        ${post.categoryTitle.toUpperCase()}
+                    </span>
+                </div>
+                <div class="blog-item-title">
+                    <span style="color:var(--blood)">$</span> cat ${post.title}.log
+                </div>
+                <div class="blog-item-excerpt">${post.desc}</div>
+                ${post.link ? `<a href="${post.link}" class="blog-item-link" onclick="event.stopPropagation()">[ READ MORE ] →</a>` : ''}
+            </div>
+        `).join('');
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('clearSearch');
+            const suggestions = document.getElementById('searchSuggestions');
+
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                clearBtn.classList.toggle('visible', query.length > 0);
+
+                clearTimeout(searchTimeout);
+
+                if (query.length === 0) {
+                    suggestions.classList.remove('active');
+                    loadPosts();
+                    return;
+                }
+
+                searchTimeout = setTimeout(() => {
+                    performSearch(query);
+                }, 300);
+            });
+
+            clearBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                clearBtn.classList.remove('visible');
+                suggestions.classList.remove('active');
+                loadPosts();
+                searchInput.focus();
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-section')) {
+                    suggestions.classList.remove('active');
+                }
+            });
+
+            suggestions.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    suggestions.classList.remove('active');
+                    searchInput.blur();
+                }
+            });
+        }
+
+        function performSearch(query) {
+            const lowerQuery = query.toLowerCase();
+            const suggestions = document.getElementById('searchSuggestions');
+
+            const results = allPostsFlat.filter(post => 
+                post.title.toLowerCase().includes(lowerQuery) ||
+                post.desc.toLowerCase().includes(lowerQuery) ||
+                post.categoryTitle.toLowerCase().includes(lowerQuery)
+            );
+
+            loadPosts(results);
+            displaySuggestions(results, query);
+        }
+
+        function displaySuggestions(results, query) {
+            const suggestions = document.getElementById('searchSuggestions');
+
+            if (results.length === 0) {
+                suggestions.innerHTML = `
+                    <div class="no-results">
+                        <div class="no-results-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="no-results-text">No results found</div>
+                    </div>
+                `;
+                suggestions.classList.add('active');
+                return;
+            }
+
+            const groupedResults = {};
+            results.forEach(post => {
+                if (!groupedResults[post.category]) {
+                    groupedResults[post.category] = [];
+                }
+                groupedResults[post.category].push(post);
+            });
+            let suggestionsHTML = '';
+            Object.keys(groupedResults).forEach(category => {
+                const posts = groupedResults[category];
+                const info = categoryInfo[category];
+                const icon = categoryIcons[category] || 'fa-file';
+
+                suggestionsHTML += `
+                    <div class="suggestion-group">
+                        <div class="suggestion-category-header">
+                            <i class="fas ${icon}"></i>
+                            ${info.title} (${posts.length})
+                        </div>
+                        ${posts.slice(0, 5).map(post => `
+                            <div class="suggestion-item" onclick="navigateToPost('${category}', \`${escapeHtml(post.title)}\`)">
+                                <div class="suggestion-title">
+                                    ${highlightQuery(post.title, query)}
+                                </div>
+                                <div class="suggestion-meta">
+                                    <span class="blog-date">${post.date}</span>
+                                    <span class="suggestion-badge">${category}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                        ${posts.length > 5 ? `
+                            <div class="suggestion-item" onclick="navigateToCategory('${category}')" style="background: var(--gray-2); border-left-color: var(--amber);">
+                                <div class="suggestion-title" style="color: var(--amber);">
+                                    <i class="fas fa-arrow-right"></i>
+                                    View all ${posts.length} results in ${info.title}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            suggestions.innerHTML = suggestionsHTML;
+            suggestions.classList.add('active');
+        }
+
+        function highlightQuery(text, query) {
+            const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+            return text.replace(regex, '<span class="suggestion-highlight">$1</span>');
+        }
+
+        function escapeRegex(str) { return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function navigateToPost(category, title) {
+            document.getElementById('seCategoriesarchSuggestions').classList.remove('active');
+            const posts = document.querySelectorAll('.blog-item');
+            posts.forEach(post => {
+                const postTitle = post.querySelector('.blog-item-title').textContent;
+                if (postTitle.includes(title)) {
+                    post.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    post.style.transform = 'translateX(15px) scale(1.02)';
+                    post.style.boxShadow = '-5px 0 0 var(--amber), 0 5px 20px rgba(0, 255, 204, 0.4)';
+                    setTimeout(() => {
+                        post.style.transform = '';
+                        post.style.boxShadow = '';
+                    }, 1000);
+                }
+            });
+        }
+
+        function navigateToCategory(category) {
+            window.location.href = `category.html?category=${category}`;
+        }
+
+        initializePage();
+    </script>
+</body>
+</html>
