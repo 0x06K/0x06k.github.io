@@ -19,6 +19,11 @@ const allPosts = {
             date: '2024-12-07',
             desc: 'Learning Windows Internels for Malware Development. #WindowsInternals #MalwareDevelopment #MalwareResearch #ReverseEngineering #CyberSecurity #RedTeam #OffensiveSecurity #ExploitDevelopment #WindowsSecurity #LowLevelProgramming #SecurityResearch #Infosec #EthicalHacking #ThreatResearch #x64 #Assembly #KernelDevelopment',
             link: 'windows-internel-post1.html'
+        },{
+            title: 'Failure OS',
+            date: '2024-12-07',
+            desc: 'Educational project demonstrating operating system concepts. Implemented in C and NASM.',
+            link: 'https://github.com/0x06k/os-development'
         }
     ],
     pentest: [
