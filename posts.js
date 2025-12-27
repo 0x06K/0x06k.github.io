@@ -18,7 +18,7 @@ const allPosts = {
             title: 'Welcome to the Blog',
             date: '2024-12-07',
             desc: 'Learning Windows Internels for Malware Development. #WindowsInternals #MalwareDevelopment #MalwareResearch #ReverseEngineering #CyberSecurity #RedTeam #OffensiveSecurity #ExploitDevelopment #WindowsSecurity #LowLevelProgramming #SecurityResearch #Infosec #EthicalHacking #ThreatResearch #x64 #Assembly #KernelDevelopment',
-            link: 'https://0x06k.github.io/BLOGS/REDTEAMING/MalwareDevelopment/windows-internel-post1.html'
+            link: '/BLOGS/REDTEAMING/MalwareDevelopment/windows-internel-post1.html'
         }
     ],
     pentest: [
