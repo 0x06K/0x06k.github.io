@@ -79,11 +79,82 @@
         .breadcrumb a {
             color: var(--blood);
             text-decoration: none;
-            transition: color 0.3s;
+            transition: all 0.3s;
+            position: relative;
+            padding: 4px 8px;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .breadcrumb a::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--blood);
+            opacity: 0;
+            animation: pulse 2s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        .breadcrumb a::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: var(--amber);
+            transform: translate(-50%, -50%);
+            opacity: 0;
         }
 
         .breadcrumb a:hover {
             color: var(--amber);
+            text-shadow: 0 0 10px var(--amber), 0 0 20px var(--amber);
+            transform: scale(1.05);
+        }
+
+        .breadcrumb a:hover::after {
+            animation: ripple 0.6s ease-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0;
+            }
+            50% {
+                opacity: 0.2;
+            }
+        }
+
+        @keyframes ripple {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 0.5;
+            }
+            100% {
+                width: 100px;
+                height: 100px;
+                opacity: 0;
+            }
+        }
+
+        @keyframes glow {
+            0%, 100% {
+                text-shadow: 0 0 5px var(--blood), 0 0 10px var(--blood);
+            }
+            50% {
+                text-shadow: 0 0 10px var(--blood), 0 0 20px var(--blood), 0 0 30px var(--amber);
+            }
+        }
+
+        .breadcrumb a {
+            animation: glow 3s ease-in-out infinite;
         }
 
         .blog-title {
@@ -432,39 +503,21 @@
             </a>
         </nav>
     </div>
-
+    <script src="posts.js"></script>
     <script>
         const POST_CONFIG = {
             id: 'windows-internals-journey',
             category: 'maldev',
-            title: 'Welcome to the Blog',
+            title: 'WELCOME POST',
             date: 'December 26, 2025',
             readTime: '5 min read'
         };
 
-        const categoryInfo = {
-            reveng: { title: 'Reverse Engineering', section: 'redteam' },
-            exploit: { title: 'Exploit Development', section: 'redteam' },
-            maldev: { title: 'Malware Development', section: 'redteam' },
-            pentest: { title: 'Penetration Testing', section: 'redteam' },
-            threathunt: { title: 'Threat Hunting', section: 'blueteam' },
-            incidentresponse: { title: 'Incident Response', section: 'blueteam' },
-            siem: { title: 'SIEM & Log Analysis', section: 'blueteam' },
-            malwareanalysis: { title: 'Malware Analysis', section: 'blueteam' },
-            picoctf: { title: 'picoCTF', section: 'ctf' },
-            htb: { title: 'HackTheBox', section: 'ctf' },
-            thm: { title: 'TryHackMe', section: 'ctf' },
-            majorctf: { title: 'Major Events', section: 'ctf' },
-            sectools: { title: 'Security Tools', section: 'projects' },
-            malware: { title: 'Malware Research', section: 'projects' },
-            webapps: { title: 'Web Applications', section: 'projects' },
-            opensource: { title: 'Open Source', section: 'projects' },
-            learning: { title: 'Learning & Experiments', section: 'projects' }
-        };
+        const categoriesInfo = categoryInfo;
 
         function initializePage() {
             const category = POST_CONFIG.category;
-            const categoryData = categoryInfo[category];
+            const categoryData = categoriesInfo[category];
             
             if (!categoryData) {
                 console.error('Invalid category:', category);
