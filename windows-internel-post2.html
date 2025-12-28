@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Enumeration in Windows: A Deep Dive // 0x06k</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --obsidian: #0a0a0f;
+            --ghost: #e8e8f0;
+            --blood: #9d00ff;
+            --amber: #00ffcc;
+            --gray-1: #1a1a2e;
+            --gray-2: #252541;
+            --gray-3: #3a3a5c;
+            --cyan: #00d4ff;
+            --green: #39ff14;
+            --orange: #ff6b35;
+            --magenta: #ff00ff;
+        }
+
+        body {
+            background: var(--obsidian);
+            color: var(--ghost);
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1.8;
+            overflow-x: hidden;
+        }
+
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            z-index: 0;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 2px, var(--amber) 2px, var(--amber) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, var(--blood) 2px, var(--blood) 4px);
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .blog-header {
+            background: transparent;
+            border: 1px solid var(--gray-3);
+            border-left: 4px solid var(--blood);
+            padding: 40px;
+            margin-bottom: 40px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .breadcrumb {
+            font-size: 11px;
+            color: var(--gray-3);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
+        .breadcrumb a {
+            color: var(--blood);
+            text-decoration: none;
+            transition: all 0.3s;
+            position: relative;
+            padding: 4px 8px;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .breadcrumb a::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--blood);
+            opacity: 0;
+            animation: pulse 2s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        .breadcrumb a::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: var(--amber);
+            transform: translate(-50%, -50%);
+            opacity: 0;
+        }
+
+        .breadcrumb a:hover {
+            color: var(--amber);
+            text-shadow: 0 0 10px var(--amber), 0 0 20px var(--amber);
+            transform: scale(1.05);
+        }
+
+        .breadcrumb a:hover::after {
+            animation: ripple 0.6s ease-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0;
+            }
+            50% {
+                opacity: 0.2;
+            }
+        }
+
+        @keyframes ripple {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 0.5;
+            }
+            100% {
+                width: 100px;
+                height: 100px;
+                opacity: 0;
+            }
+        }
+
+        @keyframes glow {
+            0%, 100% {
+                text-shadow: 0 0 5px var(--blood), 0 0 10px var(--blood);
+            }
+            50% {
+                text-shadow: 0 0 10px var(--blood), 0 0 20px var(--blood), 0 0 30px var(--amber);
+            }
+        }
+
+        .breadcrumb a {
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        .blog-title {
+            font-size: 42px;
+            color: var(--ghost);
+            font-weight: 700;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+            line-height: 1.2;
+        }
+
+        .blog-title::before {
+            content: '$ ';
+            color: var(--blood);
+        }
+
+        .blog-meta {
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding-top: 20px;
+            border-top: 1px solid var(--gray-3);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .meta-item i {
+            color: var(--amber);
+        }
+
+        .category-badge {
+            padding: 5px 12px;
+            background: rgba(157, 0, 255, 0.1);
+            border: 1px solid var(--blood);
+            color: var(--blood);
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .blog-content {
+            animation: fadeInUp 0.6s ease-out 0.2s backwards;
+        }
+
+        .content-section {
+            background: transparent;
+            border: 1px solid var(--gray-3);
+            border-left: 2px solid var(--blood);
+            padding: 40px;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+
+        .content-section:hover {
+            border-left-color: var(--amber);
+            box-shadow: -3px 0 0 var(--amber), 0 5px 15px rgba(0, 255, 204, 0.1);
+            background: rgba(26, 26, 46, 0.1);
+        }
+
+        .section-header {
+            font-size: 24px;
+            color: var(--amber);
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-header::before {
+            content: '[#]';
+            color: var(--blood);
+            font-size: 20px;
+        }
+
+        .content-section h3 {
+            font-size: 18px;
+            color: var(--cyan);
+            font-weight: 600;
+            margin: 25px 0 15px 0;
+        }
+
+        .content-section p {
+            margin-bottom: 20px;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .content-section p:last-child {
+            margin-bottom: 0;
+        }
+
+        .content-section ul {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        .content-section li {
+            margin-bottom: 10px;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .content-section li::marker {
+            color: var(--blood);
+        }
+
+        .content-section strong {
+            color: var(--amber);
+            font-weight: 600;
+        }
+
+        .content-section code {
+            background: rgba(157, 0, 255, 0.1);
+            color: var(--amber);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
+        pre {
+            background: var(--gray-1);
+            border: 1px solid var(--gray-3);
+            border-left: 3px solid var(--blood);
+            padding: 20px;
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        pre code {
+            background: none;
+            color: var(--ghost);
+            padding: 0;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .keyword { color: #ff79c6; }
+        .type { color: #8be9fd; }
+        .function { color: #50fa7b; }
+        .string { color: #f1fa8c; }
+        .comment { color: #6272a4; font-style: italic; }
+        .number { color: #bd93f9; }
+        .operator { color: #ff79c6; }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 13px;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid var(--gray-3);
+        }
+
+        .comparison-table th {
+            background: var(--gray-2);
+            color: var(--amber);
+            font-weight: 600;
+        }
+
+        .comparison-table tr:hover {
+            background: rgba(26, 26, 46, 0.3);
+        }
+
+        .post-navigation {
+            display: flex;
+            gap: 20px;
+            margin-top: 60px;
+            animation: fadeInUp 0.6s ease-out 0.4s backwards;
+        }
+
+        .nav-button {
+            flex: 1;
+            background: transparent;
+            border: 1px solid var(--gray-3);
+            padding: 25px;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 204, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .nav-button:hover::before {
+            left: 100%;
+        }
+
+        .nav-button:hover {
+            border-color: var(--amber);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 255, 204, 0.2);
+            background: rgba(26, 26, 46, 0.3);
+        }
+
+        .nav-label {
+            font-size: 10px;
+            color: var(--gray-3);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .nav-title {
+            font-size: 14px;
+            color: var(--ghost);
+            font-weight: 600;
+        }
+
+        .nav-button:hover .nav-title {
+            color: var(--amber);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--blood);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--amber);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 15px;
+            }
+
+            .blog-header {
+                padding: 25px;
+            }
+
+            .blog-title {
+                font-size: 28px;
+            }
+
+            .content-section {
+                padding: 25px;
+            }
+
+            .section-header {
+                font-size: 20px;
+            }
+
+            .post-navigation {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="matrix-bg"></div>
+    
+    <div class="container">
+        <header class="blog-header">
+            <div class="breadcrumb">
+                <a href="index.html">HOME</a> / <span id="category-link"></span> / <span id="post-slug"></span>
+            </div>
+            
+            <h1 class="blog-title" id="post-title">Loading...</h1>
+            
+            <div class="blog-meta">
+                <div class="meta-item">
+                    <i class="fas fa-calendar"></i>
+                    <span id="post-date">Loading...</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-clock"></i>
+                    <span id="post-read-time">12 min read</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-user"></i>
+                    <span>0x06k</span>
+                </div>
+                <span class="category-badge" id="post-category-badge">LOADING</span>
+            </div>
+        </header>
+
+        <article class="blog-content">
+            <section class="content-section">
+                <h2 class="section-header">Introduction</h2>
+                <p>Ever wondered what's actually running on your Windows machine right now? Spoiler alert: it's probably 47 Chrome tabs, Microsoft Edge (desperately trying to convince you it exists), and something called "svchost.exe" appearing 23 times for reasons Microsoft will never explain.</p>
+                
+                <p>Process enumeration is a fundamental technique in Windows programming, essential for system monitoring, security research, and debugging. In this post, we'll explore three different approaches to enumerate running processes on Windows, each with its own trade-offs and use cases. Think of it as three different ways to peek at Windows' to-do list.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Understanding Process Management in Windows</h2>
+                <p>Before diving into the code, it's important to understand how Windows manages processes. The Windows kernel maintains a list of all active processes, tracking information like process IDs (PIDs), parent-child relationships, thread counts, and memory usage. User-mode applications can query this information through various APIs, each offering different levels of detail and accessibility.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Method 1: Tool Help API (CreateToolhelp32Snapshot)</h2>
+                <p>The Tool Help API is the most straightforward method for process enumeration. It's well-documented, stable across Windows versions, and Microsoft actually wants you to use it.</p>
+
+                <h3>How It Works</h3>
+                <p>Creates a snapshot of the system state at a specific moment in time.</p>
+
+                <pre><code><span class="comment">// Create a snapshot of all processes</span>
+<span class="type">HANDLE</span> hSnapshot <span class="operator">=</span> <span class="function">CreateToolhelp32Snapshot</span>(<span class="type">TH32CS_SNAPPROCESS</span>, <span class="number">0</span>);
+
+<span class="comment">// Initialize the process entry structure</span>
+<span class="type">PROCESSENTRY32</span> pe;
+pe.dwSize <span class="operator">=</span> <span class="keyword">sizeof</span>(<span class="type">PROCESSENTRY32</span>);
+
+<span class="comment">// Start enumeration</span>
+<span class="keyword">if</span> (<span class="function">Process32First</span>(hSnapshot, <span class="operator">&</span>pe)) {
+    <span class="keyword">do</span> {
+        <span class="function">printf</span>(<span class="string">"Process: %s (PID: %lu)\n"</span>, pe.szExeFile, pe.th32ProcessID);
+    } <span class="keyword">while</span> (<span class="function">Process32Next</span>(hSnapshot, <span class="operator">&</span>pe));
+}
+
+<span class="function">CloseHandle</span>(hSnapshot);</code></pre>
+
+                <p>The <code>PROCESSENTRY32</code> structure gives you process ID, parent PID, executable name, thread count, base priority, and heap information. Use this when you need basic process information without elevated privileges.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Method 2: Process Status API (PSAPI)</h2>
+                <p>PSAPI returns only process IDs. Fast and lightweight when you don't need detailed information.</p>
+
+                <h3>How It Works</h3>
+                <p><code>EnumProcesses</code> fills a buffer with process IDs.</p>
+
+                <pre><code><span class="type">DWORD</span> processes[<span class="number">1024</span>];
+<span class="type">DWORD</span> bytesReturned;
+
+<span class="keyword">if</span> (<span class="function">EnumProcesses</span>(processes, <span class="keyword">sizeof</span>(processes), <span class="operator">&</span>bytesReturned)) {
+    <span class="type">DWORD</span> processCount <span class="operator">=</span> bytesReturned <span class="operator">/</span> <span class="keyword">sizeof</span>(<span class="type">DWORD</span>);
+    
+    <span class="keyword">for</span> (<span class="type">DWORD</span> i <span class="operator">=</span> <span class="number">0</span>; i <span class="operator">&lt;</span> processCount; i<span class="operator">++</span>) {
+        <span class="keyword">if</span> (processes[i] <span class="operator">!=</span> <span class="number">0</span>) {
+            <span class="function">printf</span>(<span class="string">"PID: %lu\n"</span>, processes[i]);
+        }
+    }
+}</code></pre>
+
+                <p>Use this as a first pass when you only need PIDs and plan to query specific processes for more details.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Method 3: Native API (NtQuerySystemInformation)</h2>
+                <p>Direct access to kernel structures through <code>ntdll.dll</code>. This is what Windows Task Manager uses internally.</p>
+
+                <h3>How It Works</h3>
+                <p>Undocumented function that returns raw kernel data structures. Requires dynamic loading.</p>
+
+                <pre><code><span class="comment">// Dynamically load the function</span>
+<span class="type">HMODULE</span> ntdll <span class="operator">=</span> <span class="function">GetModuleHandleA</span>(<span class="string">"ntdll.dll"</span>);
+<span class="type">_NtQuerySystemInformation</span> NtQuerySystemInformation <span class="operator">=</span> 
+    (<span class="type">_NtQuerySystemInformation</span>)<span class="function">GetProcAddress</span>(ntdll, <span class="string">"NtQuerySystemInformation"</span>);
+
+<span class="comment">// Query process information</span>
+<span class="type">ULONG</span> bufferSize <span class="operator">=</span> <span class="number">0x10000</span>;
+<span class="type">PVOID</span> buffer <span class="operator">=</span> <span class="function">malloc</span>(bufferSize);
+<span class="type">NTSTATUS</span> status <span class="operator">=</span> <span class="function">NtQuerySystemInformation</span>(
+    <span class="type">SystemProcessInformation</span>, 
+    buffer, 
+    bufferSize, 
+    <span class="operator">&</span>returnLength
+);
+
+<span class="comment">// Parse the linked list</span>
+<span class="type">PSYSTEM_PROCESS_INFORMATION</span> spi <span class="operator">=</span> (<span class="type">PSYSTEM_PROCESS_INFORMATION</span>)buffer;
+<span class="keyword">while</span> (spi<span class="operator">-></span>NextEntryOffset <span class="operator">!=</span> <span class="number">0</span>) {
+    <span class="function">wprintf</span>(<span class="string">L"PID: %u, Name: %wZ\n"</span>, 
+            (<span class="type">DWORD</span>)spi<span class="operator">-></span>UniqueProcessId, 
+            <span class="operator">&</span>spi<span class="operator">-></span>ImageName);
+    spi <span class="operator">=</span> (<span class="type">PSYSTEM_PROCESS_INFORMATION</span>)((<span class="type">PUCHAR</span>)spi <span class="operator">+</span> spi<span class="operator">-></span>NextEntryOffset);
+}</code></pre>
+
+                <p>Provides everything: PIDs, process names, thread details, CPU time, memory stats, I/O stats, handle count, and session ID. Use this for advanced monitoring tools, security research, or when you need maximum detail and stealth. Be aware it's undocumented and may change between Windows versions.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Practical Considerations</h2>
+                
+                <p>Most process enumeration works with standard user privileges. Some system processes like CSRSS are protected and will return <code>ERROR_ACCESS_DENIED</code>. 32-bit applications cannot fully enumerate 64-bit processes.</p>
+
+                <p>Always check return values: <code>INVALID_HANDLE_VALUE</code> from snapshot creation, <code>ERROR_NO_MORE_FILES</code> when enumeration completes, <code>STATUS_INFO_LENGTH_MISMATCH</code> when buffers are too small.</p>
+
+                <p>For PSAPI and Native API, start with a 64KB buffer and double it when you get <code>STATUS_INFO_LENGTH_MISMATCH</code>. Always free allocated memory.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">References</h2>
+                <div class="breadcrumb">
+                    <ul>
+                        <li><a href="https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-createtoolhelp32snapshot" style="color: var(--amber); text-decoration: none;">CreateToolhelp32Snapshot - Microsoft Docs</a></li>
+                        <li><a href="https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-enumprocesses" style="color: var(--amber); text-decoration: none;">EnumProcesses - Microsoft Docs</a></li>
+                        <li><a href="http://undocumented.ntinternals.net/" style="color: var(--amber); text-decoration: none;">NtQuerySystemInformation - Undocumented NT</a></li>
+                        <li><a href="https://github.com/0x06k/Ring-3-to-Ring-0" style="color: var(--amber); text-decoration: none;">Github Code Repo</a></li>
+                    </ul>
+                </div>
+            </section>
+        </article>
+
+        <nav class="post-navigation">
+            <a href="https://0x06k.github.io/windows-internel-post1.html" class="nav-button">
+                <span class="nav-label">← Previous Post</span>
+                <span class="nav-title">Welcome Post</span>
+            </a>
+            <a href="#" class="nav-button">
+                <span class="nav-label">Next Post →</span>
+                <span class="nav-title">No post yet, comming soon.</span>
+            </a>
+        </nav>
+    </div>
+    <script src="posts.js"></script>
+    <script>
+        const POST_CONFIG = {
+            id: 'process-enumeration-windows',
+            category: 'maldev',
+            title: 'Process Enumeration in Windows: A Deep Dive',
+            date: 'December 27, 2025',
+            readTime: '12 min read'
+        };
+
+        const categoriesInfo = categoryInfo;
+
+        function initializePage() {
+            const category = POST_CONFIG.category;
+            const categoryData = categoriesInfo[category];
+            
+            if (!categoryData) {
+                console.error('Invalid category:', category);
+                return;
+            }
+
+            const categoryLink = document.getElementById('category-link');
+            const categoryUrl = `category.html?category=${category}`;
+            categoryLink.innerHTML = `<a href="${categoryUrl}">${categoryData.title.toUpperCase()}</a>`;
+            
+            const slug = POST_CONFIG.title
+                .toUpperCase()
+                .replace(/[^A-Z0-9\s]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .split(' ')
+                .slice(0, 3)
+                .join(' ');
+            document.getElementById('post-slug').textContent = slug;
+
+            document.getElementById('post-title').textContent = POST_CONFIG.title;
+            document.getElementById('post-date').textContent = POST_CONFIG.date;
+            document.getElementById('post-read-time').textContent = POST_CONFIG.readTime;
+            
+            const badge = document.getElementById('post-category-badge');
+            badge.textContent = categoryData.title.toUpperCase();
+            badge.className = `category-badge ${category}`;
+            
+            document.title = `${POST_CONFIG.title} // 0x06k`;
+        }
+
+        initializePage();
+    </script>
+</body>
+</html>

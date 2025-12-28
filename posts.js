@@ -19,6 +19,12 @@ const allPosts = {
             date: '2025-12-07',
             desc: 'Learning Windows Internels for Malware Development. #WindowsInternals #MalwareDevelopment #MalwareResearch #ReverseEngineering #CyberSecurity #RedTeam #OffensiveSecurity #ExploitDevelopment #WindowsSecurity #LowLevelProgramming #SecurityResearch #Infosec #EthicalHacking #ThreatResearch #x64 #Assembly #KernelDevelopment',
             link: 'windows-internel-post1.html'
+        },
+        {
+            title: 'Process Enumeration - Stalking Your Own Computer',
+            date: '2025-12-07',
+            desc: 'Process Enumeration Through WinAPIs. #ProcessEnumeration #WinAPI #WindowsInternals #ProcessManagement #WindowsProgramming #SystemProgramming #CProgramming',
+            link: 'windows-internel-post1.html'
         }
     ],
     pentest: [
