@@ -570,6 +570,137 @@ pe.dwSize <span class="operator">=</span> <span class="keyword">sizeof</span>(<s
 
                 <p>Provides everything: PIDs, process names, thread details, CPU time, memory stats, I/O stats, handle count, and session ID. Use this for advanced monitoring tools, security research, or when you need maximum detail and stealth. Be aware it's undocumented and may change between Windows versions.</p>
             </section>
+            <section class="content-section">
+                <h2 class="section-header">Method 4: Windows Terminal Services (WTSEnumerateProcesses)</h2>
+                <p>Specialized API designed for Terminal Services and Remote Desktop environments. This method is unique because it provides session context and user information directly.</p>
+
+                <h3>How It Works</h3>
+                <p>Returns process information along with Terminal Services session data and user SIDs.</p>
+
+                <pre><code><span class="type">PWTS_PROCESS_INFOA</span> pProcessInfo <span class="operator">=</span> <span class="type">NULL</span>;
+<span class="type">DWORD</span> dwCount <span class="operator">=</span> <span class="number">0</span>;
+
+<span class="comment">// Enumerate all processes on local machine</span>
+<span class="keyword">if</span> (<span class="function">WTSEnumerateProcessesA</span>(
+    <span class="type">WTS_CURRENT_SERVER_HANDLE</span>,
+    <span class="number">0</span>,
+    <span class="number">1</span>,
+    <span class="operator">&</span>pProcessInfo,
+    <span class="operator">&</span>dwCount
+)) {
+    <span class="keyword">for</span> (<span class="type">DWORD</span> i <span class="operator">=</span> <span class="number">0</span>; i <span class="operator">&lt;</span> dwCount; i<span class="operator">++</span>) {
+        <span class="function">printf</span>(<span class="string">"PID: %lu, Session: %lu, Name: %s\n"</span>,
+               pProcessInfo[i].ProcessId,
+               pProcessInfo[i].SessionId,
+               pProcessInfo[i].pProcessName);
+    }
+    <span class="function">WTSFreeMemory</span>(pProcessInfo);
+}</code></pre>
+
+                <p>The <code>WTS_PROCESS_INFO</code> structure provides process ID, session ID, process name, and user SID. This is the only API that gives you session and user context in a single call. Use this for Windows Server environments, multi-user systems, RDP scenarios, or when building admin tools that need user session awareness.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Method 5: Native Iteration (NtGetNextProcess)</h2>
+                <p>Modern Native API introduced in Windows 10 that provides iterator-style process enumeration. Unlike <code>NtQuerySystemInformation</code>, this method enumerates processes one at a time.</p>
+
+                <h3>How It Works</h3>
+                <p>Returns a handle to each process sequentially without creating a full snapshot.</p>
+
+                <pre><code><span class="comment">// Get function pointer (not in standard headers)</span>
+<span class="type">HMODULE</span> ntdll <span class="operator">=</span> <span class="function">GetModuleHandleA</span>(<span class="string">"ntdll.dll"</span>);
+<span class="type">pNtGetNextProcess</span> NtGetNextProcess <span class="operator">=</span> 
+    (<span class="type">pNtGetNextProcess</span>)<span class="function">GetProcAddress</span>(ntdll, <span class="string">"NtGetNextProcess"</span>);
+
+<span class="type">HANDLE</span> hProcess <span class="operator">=</span> <span class="type">NULL</span>;
+<span class="type">NTSTATUS</span> status;
+
+<span class="comment">// Iterate through all processes</span>
+<span class="keyword">while</span> (<span class="type">TRUE</span>) {
+    <span class="type">HANDLE</span> hNextProcess <span class="operator">=</span> <span class="type">NULL</span>;
+    
+    status <span class="operator">=</span> <span class="function">NtGetNextProcess</span>(
+        hProcess,
+        <span class="type">PROCESS_QUERY_LIMITED_INFORMATION</span>,
+        <span class="number">0</span>,
+        <span class="number">0</span>,
+        <span class="operator">&</span>hNextProcess
+    );
+    
+    <span class="keyword">if</span> (hProcess) <span class="function">CloseHandle</span>(hProcess);
+    <span class="keyword">if</span> (status <span class="operator">!=</span> <span class="type">STATUS_SUCCESS</span>) <span class="keyword">break</span>;
+    
+    hProcess <span class="operator">=</span> hNextProcess;
+    
+    <span class="comment">// Must query for actual information</span>
+    <span class="function">NtQueryInformationProcess</span>(hProcess, ...);
+    <span class="function">QueryFullProcessImageNameA</span>(hProcess, ...);
+}</code></pre>
+
+                <p>Returns only a process handle. You must make additional API calls to get PID, name, or any other details. Minimal memory footprint but requires multiple kernel transitions per process. Use this in kernel-mode drivers or when memory is extremely constrained. For most user-mode applications, <code>NtQuerySystemInformation</code> is more efficient.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Method Comparison</h2>
+                
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>API Calls</th>
+                            <th>Best Use Case</th>
+                            <th>Key Advantage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>CreateToolhelp32Snapshot</strong></td>
+                            <td>1 call (snapshot) + iterations</td>
+                            <td>General-purpose process enumeration</td>
+                            <td>Well-documented, stable, easy to use</td>
+                        </tr>
+                        <tr>
+                            <td><strong>EnumProcesses</strong></td>
+                            <td>1 call (returns PID array)</td>
+                            <td>Quick PID list, first-pass filtering</td>
+                            <td>Lightweight, minimal overhead</td>
+                        </tr>
+                        <tr>
+                            <td><strong>NtQuerySystemInformation</strong></td>
+                            <td>1 call (all processes + details)</td>
+                            <td>Security tools, detailed monitoring</td>
+                            <td>Most comprehensive, single kernel transition</td>
+                        </tr>
+                        <tr>
+                            <td><strong>WTSEnumerateProcesses</strong></td>
+                            <td>1 call (processes + session/user)</td>
+                            <td>Terminal Services, RDP, multi-user systems</td>
+                            <td>Only API with session ID and user SID</td>
+                        </tr>
+                        <tr>
+                            <td><strong>NtGetNextProcess</strong></td>
+                            <td>N calls (one per process) + queries</td>
+                            <td>Kernel drivers, memory-constrained scenarios</td>
+                            <td>Minimal memory per iteration</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Performance Characteristics</h3>
+                <p>For enumerating 300 processes:</p>
+                <ul>
+                    <li><strong>NtQuerySystemInformation:</strong> ~1-2ms (fastest - single call)</li>
+                    <li><strong>CreateToolhelp32Snapshot:</strong> ~5-10ms (snapshot overhead)</li>
+                    <li><strong>EnumProcesses:</strong> ~2-5ms (just PIDs, no details)</li>
+                    <li><strong>WTSEnumerateProcesses:</strong> ~10-15ms (includes user/session queries)</li>
+                    <li><strong>NtGetNextProcess:</strong> ~50-100ms (slowest - multiple calls per process)</li>
+                </ul>
+
+                <h3>Detection & Security</h3>
+                <p><strong>Highly Monitored:</strong> <code>NtQuerySystemInformation</code> is heavily flagged by anti-cheat and EDR systems due to common usage in malware and game hacks.</p>
+                <p><strong>Low Risk:</strong> <code>CreateToolhelp32Snapshot</code>, <code>EnumProcesses</code>, and <code>WTSEnumerateProcesses</code> are standard Windows APIs with minimal detection.</p>
+                <p><strong>Emerging:</strong> <code>NtGetNextProcess</code> is newer and less monitored, but as it becomes known, detection will increase.</p>
+            </section>
 
             <section class="content-section">
                 <h2 class="section-header">Practical Considerations</h2>
@@ -578,7 +709,7 @@ pe.dwSize <span class="operator">=</span> <span class="keyword">sizeof</span>(<s
 
                 <p>Always check return values: <code>INVALID_HANDLE_VALUE</code> from snapshot creation, <code>ERROR_NO_MORE_FILES</code> when enumeration completes, <code>STATUS_INFO_LENGTH_MISMATCH</code> when buffers are too small.</p>
 
-                <p>For PSAPI and Native API, start with a 64KB buffer and double it when you get <code>STATUS_INFO_LENGTH_MISMATCH</code>. Always free allocated memory.</p>
+                <p>For PSAPI and Native API, start with a 64KB buffer and double it when you get <code>STATUS_INFO_LENGTH_MISMATCH</code>. Always free allocated memory. For <code>WTSEnumerateProcesses</code>, always call <code>WTSFreeMemory</code> to free the returned buffer.</p>
             </section>
 
             <section class="content-section">
@@ -596,7 +727,7 @@ pe.dwSize <span class="operator">=</span> <span class="keyword">sizeof</span>(<s
                 <h2 class="section-header">What's Next</h2>
                 
                 <p>The next post will focus on <strong>process module enumeration</strong> — understanding how Windows keeps tracks of running module in a process and how we can query that information using simple APIs.</p>
-                
+
             </section>
         </article>
 
