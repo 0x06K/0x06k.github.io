@@ -28,7 +28,7 @@ const allPosts = {
         },
         {
             title: '(Process Memory Inspection)',
-            date: '2025-12-28',
+            date: '2025-12-29',
             desc: 'Process Enumeration Through WinAPIs. #WinAPI #WindowsInternals #ProcessManagement #WindowsProgramming #SystemProgramming #CProgramming',
             link: 'windows-internel-post3.html'
         }
