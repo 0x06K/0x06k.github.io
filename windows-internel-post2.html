@@ -656,45 +656,55 @@ pe.dwSize <span class="operator">=</span> <span class="keyword">sizeof</span>(<s
                         <tr>
                             <td><strong>CreateToolhelp32Snapshot</strong></td>
                             <td>1 call (snapshot) + iterations</td>
-                            <td>General-purpose process enumeration</td>
+                            <td>General-purpose user-mode enumeration</td>
                             <td>Well-documented, stable, easy to use</td>
                         </tr>
                         <tr>
                             <td><strong>EnumProcesses</strong></td>
                             <td>1 call (returns PID array)</td>
-                            <td>Quick PID list, first-pass filtering</td>
-                            <td>Lightweight, minimal overhead</td>
+                            <td>Fast PID discovery, first-pass filtering</td>
+                            <td>Lightweight, minimal serialization</td>
                         </tr>
                         <tr>
                             <td><strong>NtQuerySystemInformation</strong></td>
-                            <td>1 call (all processes + details)</td>
-                            <td>Security tools, detailed monitoring</td>
-                            <td>Most comprehensive, single kernel transition</td>
+                            <td>1 call (process snapshot)</td>
+                            <td>Diagnostics, debugging, legacy snapshot tools</td>
+                            <td>Most comprehensive data in a single kernel transition</td>
                         </tr>
                         <tr>
                             <td><strong>WTSEnumerateProcesses</strong></td>
-                            <td>1 call (processes + session/user)</td>
-                            <td>Terminal Services, RDP, multi-user systems</td>
-                            <td>Only API with session ID and user SID</td>
+                            <td>1 call (process + session/user info)</td>
+                            <td>Terminal Services, RDP, multi-session environments</td>
+                            <td>Built-in session ID and user SID resolution</td>
                         </tr>
                         <tr>
                             <td><strong>NtGetNextProcess</strong></td>
-                            <td>N calls (one per process) + queries</td>
-                            <td>Kernel drivers, memory-constrained scenarios</td>
-                            <td>Minimal memory per iteration</td>
+                            <td>O(P) calls (iterator + handle creation)</td>
+                            <td>Security-sensitive, permission-aware enumeration</td>
+                            <td>ACL- and PPL-respecting, minimal information disclosure</td>
                         </tr>
                     </tbody>
                 </table>
+                
 
                 <h3>Performance Characteristics</h3>
-                <p>For enumerating 300 processes:</p>
+                <p>Time complexity for enumerating processes:</p>
                 <ul>
-                    <li><strong>NtQuerySystemInformation:</strong> ~1-2ms (fastest - single call)</li>
-                    <li><strong>CreateToolhelp32Snapshot:</strong> ~5-10ms (snapshot overhead)</li>
-                    <li><strong>EnumProcesses:</strong> ~2-5ms (just PIDs, no details)</li>
-                    <li><strong>WTSEnumerateProcesses:</strong> ~10-15ms (includes user/session queries)</li>
-                    <li><strong>NtGetNextProcess:</strong> ~50-100ms (slowest - multiple calls per process)</li>
+                    <li><strong>NtQuerySystemInformation:</strong> O(P + T) — single snapshot; cost scales with processes and total threads</li>
+                    <li><strong>EnumProcesses:</strong> O(P) — enumerates process IDs only</li>
+                    <li><strong>CreateToolhelp32Snapshot:</strong> O(P + T + M) — snapshot includes processes, threads, and optionally modules</li>
+                    <li><strong>WTSEnumerateProcesses:</strong> O(P + S) — per-process session and user resolution</li>
+                    <li><strong>NtGetNextProcess:</strong> O(P) — iterator-based enumeration with high per-process syscall overhead</li>
                 </ul>
+
+                <p><strong>Where:</strong></p>
+                <ul>
+                    <li><strong>P</strong> = number of processes on the system</li>
+                    <li><strong>T</strong> = total number of threads across all processes</li>
+                    <li><strong>M</strong> = total number of modules enumerated (if module snapshot flags are used)</li>
+                    <li><strong>S</strong> = number of active user sessions</li>
+                </ul>
+
 
                 <h3>Detection & Security</h3>
                 <p><strong>Highly Monitored:</strong> <code>NtQuerySystemInformation</code> is heavily flagged by anti-cheat and EDR systems due to common usage in malware and game hacks.</p>
