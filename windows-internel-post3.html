@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extracting Process Information: Windows API Deep Dive // 0x06k</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --obsidian: #0a0a0f;
+            --ghost: #e8e8f0;
+            --blood: #9d00ff;
+            --amber: #00ffcc;
+            --gray-1: #1a1a2e;
+            --gray-2: #252541;
+            --gray-3: #3a3a5c;
+            --cyan: #00d4ff;
+            --green: #39ff14;
+            --orange: #ff6b35;
+            --magenta: #ff00ff;
+        }
+
+        body {
+            background: var(--obsidian);
+            color: var(--ghost);
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1.8;
+            overflow-x: hidden;
+        }
+
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            z-index: 0;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 2px, var(--amber) 2px, var(--amber) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, var(--blood) 2px, var(--blood) 4px);
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .blog-header {
+            background: transparent;
+            border: 1px solid var(--gray-3);
+            border-left: 4px solid var(--blood);
+            padding: 40px;
+            margin-bottom: 40px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .breadcrumb {
+            font-size: 11px;
+            color: var(--gray-3);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
+        .breadcrumb a {
+            color: var(--blood);
+            text-decoration: none;
+            transition: all 0.3s;
+            position: relative;
+            padding: 4px 8px;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .breadcrumb a::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--blood);
+            opacity: 0;
+            animation: pulse 2s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        .breadcrumb a::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: var(--amber);
+            transform: translate(-50%, -50%);
+            opacity: 0;
+        }
+
+        .breadcrumb a:hover {
+            color: var(--amber);
+            text-shadow: 0 0 10px var(--amber), 0 0 20px var(--amber);
+            transform: scale(1.05);
+        }
+
+        .breadcrumb a:hover::after {
+            animation: ripple 0.6s ease-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0;
+            }
+            50% {
+                opacity: 0.2;
+            }
+        }
+
+        @keyframes ripple {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 0.5;
+            }
+            100% {
+                width: 100px;
+                height: 100px;
+                opacity: 0;
+            }
+        }
+
+        @keyframes glow {
+            0%, 100% {
+                text-shadow: 0 0 5px var(--blood), 0 0 10px var(--blood);
+            }
+            50% {
+                text-shadow: 0 0 10px var(--blood), 0 0 20px var(--blood), 0 0 30px var(--amber);
+            }
+        }
+
+        .breadcrumb a {
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        .blog-title {
+            font-size: 42px;
+            color: var(--ghost);
+            font-weight: 700;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+            line-height: 1.2;
+        }
+
+        .blog-title::before {
+            content: '$ ';
+            color: var(--blood);
+        }
+
+        .blog-meta {
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding-top: 20px;
+            border-top: 1px solid var(--gray-3);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .meta-item i {
+            color: var(--amber);
+        }
+
+        .category-badge {
+            padding: 5px 12px;
+            background: rgba(157, 0, 255, 0.1);
+            border: 1px solid var(--blood);
+            color: var(--blood);
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .blog-content {
+            animation: fadeInUp 0.6s ease-out 0.2s backwards;
+        }
+
+        .content-section {
+            background: transparent;
+            border: 1px solid var(--gray-3);
+            border-left: 2px solid var(--blood);
+            padding: 40px;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+
+        .content-section:hover {
+            border-left-color: var(--amber);
+            box-shadow: -3px 0 0 var(--amber), 0 5px 15px rgba(0, 255, 204, 0.1);
+            background: rgba(26, 26, 46, 0.1);
+        }
+
+        .section-header {
+            font-size: 24px;
+            color: var(--amber);
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-header::before {
+            content: '[#]';
+            color: var(--blood);
+            font-size: 20px;
+        }
+
+        .content-section h3 {
+            font-size: 18px;
+            color: var(--cyan);
+            font-weight: 600;
+            margin: 25px 0 15px 0;
+        }
+
+        .content-section p {
+            margin-bottom: 20px;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .content-section p:last-child {
+            margin-bottom: 0;
+        }
+
+        .content-section ul {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        .content-section li {
+            margin-bottom: 10px;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .content-section li::marker {
+            color: var(--blood);
+        }
+
+        .content-section strong {
+            color: var(--amber);
+            font-weight: 600;
+        }
+
+        .content-section code {
+            background: rgba(157, 0, 255, 0.1);
+            color: var(--amber);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
+        pre {
+            background: var(--gray-1);
+            border: 1px solid var(--gray-3);
+            border-left: 3px solid var(--blood);
+            padding: 20px;
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        pre code {
+            background: none;
+            color: var(--ghost);
+            padding: 0;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .keyword { color: #ff79c6; }
+        .type { color: #8be9fd; }
+        .function { color: #50fa7b; }
+        .string { color: #f1fa8c; }
+        .comment { color: #6272a4; font-style: italic; }
+        .number { color: #bd93f9; }
+        .operator { color: #ff79c6; }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 13px;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid var(--gray-3);
+        }
+
+        .comparison-table th {
+            background: var(--gray-2);
+            color: var(--amber);
+            font-weight: 600;
+        }
+
+        .comparison-table tr:hover {
+            background: rgba(26, 26, 46, 0.3);
+        }
+
+        .post-navigation {
+            display: flex;
+            gap: 20px;
+            margin-top: 60px;
+            animation: fadeInUp 0.6s ease-out 0.4s backwards;
+        }
+
+        .nav-button {
+            flex: 1;
+            background: transparent;
+            border: 1px solid var(--gray-3);
+            padding: 25px;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 204, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .nav-button:hover::before {
+            left: 100%;
+        }
+
+        .nav-button:hover {
+            border-color: var(--amber);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 255, 204, 0.2);
+            background: rgba(26, 26, 46, 0.3);
+        }
+
+        .nav-label {
+            font-size: 10px;
+            color: var(--gray-3);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .nav-title {
+            font-size: 14px;
+            color: var(--ghost);
+            font-weight: 600;
+        }
+
+        .nav-button:hover .nav-title {
+            color: var(--amber);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--blood);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--amber);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 15px;
+            }
+
+            .blog-header {
+                padding: 25px;
+            }
+
+            .blog-title {
+                font-size: 28px;
+            }
+
+            .content-section {
+                padding: 25px;
+            }
+
+            .section-header {
+                font-size: 20px;
+            }
+
+            .post-navigation {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="matrix-bg"></div>
+    
+    <div class="container">
+        <header class="blog-header">
+            <div class="breadcrumb">
+                <a href="index.html">HOME</a> / <span id="category-link"></span> / <span id="post-slug"></span>
+            </div>
+            
+            <h1 class="blog-title" id="post-title">Loading...</h1>
+            
+            <div class="blog-meta">
+                <div class="meta-item">
+                    <i class="fas fa-calendar"></i>
+                    <span id="post-date">Loading...</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-clock"></i>
+                    <span id="post-read-time">15 min read</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-user"></i>
+                    <span>0x06k</span>
+                </div>
+                <span class="category-badge" id="post-category-badge">LOADING</span>
+            </div>
+        </header>
+
+        <article class="blog-content">
+            <section class="content-section">
+                <h2 class="section-header">Introduction</h2>
+                <p>So we've enumerated all the processes running on a Windows machine. Great! Now what? We've got a list of PIDs, but that's like having a phonebook without being able to actually call anyone. The real power comes from understanding what information we can extract from these processes.</p>
+                
+                <p>Windows provides a rich set of APIs to query process information—everything from security contexts and memory layout to architecture detection and handle metadata. Some are well-documented and friendly, others are undocumented and require digging through kernel structures. This post explores the essential techniques for extracting detailed process information using both documented and native Windows APIs.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">The Process Information Landscape</h2>
+                <p>Process information in Windows exists at multiple layers. At the highest level, we have documented Win32 APIs that abstract away complexity. Below that, we have the Native API layer (ntdll.dll) that provides direct access to kernel structures. And at the lowest level, we have kernel-mode structures like EPROCESS that user-mode code can't directly access.</p>
+
+                <p>Each layer offers different trade-offs. Win32 APIs are stable and supported but sometimes limited. Native APIs gives us more power but are undocumented and may change. Understanding which API to use for which information is crucial for building robust system tools, huh, system tools.? (you know what i mean :P)</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Getting the Process Image Path</h2>
+                <p>One of the first things we'll want to know about a process is what executable it's running. The <code>QueryFullProcessImageName</code> API is the modern, preferred method for this.</p>
+
+                <h3>How It Works</h3>
+                <p>Requires a process handle with <code>PROCESS_QUERY_LIMITED_INFORMATION</code> access rights.</p>
+
+                <pre><code><span class="type">WCHAR</span> imagePath[<span class="type">MAX_PATH</span>];
+<span class="type">DWORD</span> size <span class="operator">=</span> <span class="type">MAX_PATH</span>;
+
+<span class="type">HANDLE</span> hProcess <span class="operator">=</span> <span class="function">OpenProcess</span>(
+    <span class="type">PROCESS_QUERY_LIMITED_INFORMATION</span>, 
+    <span class="type">FALSE</span>, 
+    pid
+);
+
+<span class="keyword">if</span> (<span class="function">QueryFullProcessImageNameW</span>(hProcess, <span class="number">0</span>, imagePath, <span class="operator">&</span>size)) {
+    <span class="function">wprintf</span>(<span class="string">L"Process Path: %s\n"</span>, imagePath);
+} <span class="keyword">else</span> {
+    <span class="function">wprintf</span>(<span class="string">L"Failed: %lu\n"</span>, <span class="function">GetLastError</span>());
+}
+
+<span class="function">CloseHandle</span>(hProcess);</code></pre>
+
+                <p>This returns the full Win32 path to the executable. Use flag <code>PROCESS_NAME_NATIVE</code> (0x00000001) to get the NT path format instead (<code>\Device\HarddiskVolume2\...</code>). This API supersedes the older <code>GetModuleFileNameEx</code> and works even on processes with minimal access rights.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Detecting Process Architecture</h2>
+                <p>In a world where 32-bit and 64-bit applications coexist, knowing which architecture a process is running under is critical. The <code>IsWow64Process</code> API tells us if a process is 32-bit running under WOW64 (Windows on Windows 64-bit).</p>
+
+                <h3>How It Works</h3>
+                <p>Returns TRUE if the process is 32-bit on 64-bit Windows, FALSE otherwise.</p>
+
+                <pre><code><span class="type">BOOL</span> isWow64 <span class="operator">=</span> <span class="type">FALSE</span>;
+<span class="type">HANDLE</span> hProcess <span class="operator">=</span> <span class="function">OpenProcess</span>(<span class="type">PROCESS_QUERY_INFORMATION</span>, <span class="type">FALSE</span>, pid);
+
+<span class="keyword">if</span> (!<span class="function">IsWow64Process</span>(hProcess, <span class="operator">&</span>isWow64)) {
+    <span class="function">printf</span>(<span class="string">"IsWow64Process failed: %lu\n"</span>, <span class="function">GetLastError</span>());
+    <span class="function">CloseHandle</span>(hProcess);
+    <span class="keyword">return</span> <span class="number">1</span>;
+}
+
+<span class="keyword">if</span> (isWow64)
+    <span class="function">printf</span>(<span class="string">"32-bit process on 64-bit Windows\n"</span>);
+<span class="keyword">else</span>
+    <span class="function">printf</span>(<span class="string">"Native architecture\n"</span>);
+
+<span class="function">CloseHandle</span>(hProcess);</code></pre>
+
+                <p>Important gotcha: On 32-bit Windows, this always returns FALSE because WOW64 doesn't exist. On 64-bit Windows, FALSE means the process is 64-bit native. This is essential for tools that need to inject code or read memory across process boundaries.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Querying Process Security Context</h2>
+                <p>Every process runs under a security context defined by its access token. The token contains the user's SID, privileges, groups, and integrity level. Two APIs are critical here: <code>OpenProcessToken</code> to get the token handle, and <code>GetTokenInformation</code> to query specific information.</p>
+
+                <h3>Opening the Process Token</h3>
+                <pre><code><span class="type">HANDLE</span> hToken <span class="operator">=</span> <span class="type">NULL</span>;
+
+<span class="comment">// Open with TOKEN_QUERY for read-only access</span>
+<span class="keyword">if</span> (!<span class="function">OpenProcessToken</span>(<span class="function">GetCurrentProcess</span>(), <span class="type">TOKEN_QUERY</span>, <span class="operator">&</span>hToken)) {
+    <span class="function">printf</span>(<span class="string">"OpenProcessToken failed: %lu\n"</span>, <span class="function">GetLastError</span>());
+    <span class="keyword">return</span> <span class="number">1</span>;
+}
+
+<span class="function">printf</span>(<span class="string">"Token opened successfully\n"</span>);
+<span class="function">CloseHandle</span>(hToken);</code></pre>
+
+                <h3>Extracting User SID</h3>
+                <pre><code><span class="type">DWORD</span> size <span class="operator">=</span> <span class="number">0</span>;
+
+<span class="comment">// First call gets required buffer size</span>
+<span class="function">GetTokenInformation</span>(hToken, <span class="type">TokenUser</span>, <span class="type">NULL</span>, <span class="number">0</span>, <span class="operator">&</span>size);
+
+<span class="type">PTOKEN_USER</span> tokenUser <span class="operator">=</span> (<span class="type">PTOKEN_USER</span>)<span class="function">malloc</span>(size);
+
+<span class="comment">// Actual query</span>
+<span class="keyword">if</span> (!<span class="function">GetTokenInformation</span>(hToken, <span class="type">TokenUser</span>, tokenUser, size, <span class="operator">&</span>size)) {
+    <span class="function">printf</span>(<span class="string">"GetTokenInformation failed: %lu\n"</span>, <span class="function">GetLastError</span>());
+    <span class="function">free</span>(tokenUser);
+    <span class="function">CloseHandle</span>(hToken);
+    <span class="keyword">return</span> <span class="number">1</span>;
+}
+
+<span class="comment">// Convert SID to string</span>
+<span class="type">LPWSTR</span> sidString <span class="operator">=</span> <span class="type">NULL</span>;
+<span class="keyword">if</span> (<span class="function">ConvertSidToStringSidW</span>(tokenUser<span class="operator">-></span>User.Sid, <span class="operator">&</span>sidString)) {
+    <span class="function">wprintf</span>(<span class="string">L"User SID: %s\n"</span>, sidString);
+    <span class="function">LocalFree</span>(sidString);
+}
+
+<span class="function">free</span>(tokenUser);
+<span class="function">CloseHandle</span>(hToken);</code></pre>
+
+                <p>The <code>GetTokenInformation</code> API is versatile. Beyond <code>TokenUser</code>, we can query <code>TokenGroups</code> for group membership, <code>TokenPrivileges</code> for enabled privileges, <code>TokenIntegrityLevel</code> for UAC integrity, and <code>TokenElevation</code> to check if a process is elevated.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Exploring Process Memory Layout</h2>
+                <p>Understanding a process's memory layout is essential for debugging, reverse engineering, or security analysis. The <code>VirtualQueryEx</code> API lets us enumerate and inspect memory regions.</p>
+
+                <h3>How It Works</h3>
+                <p>Iterates through virtual memory, querying each region's properties.</p>
+
+                <pre><code><span class="type">MEMORY_BASIC_INFORMATION</span> mbi;
+<span class="keyword">unsigned char</span><span class="operator">*</span> addr <span class="operator">=</span> <span class="number">0</span>;
+
+<span class="keyword">while</span> (<span class="function">VirtualQueryEx</span>(hProcess, addr, <span class="operator">&</span>mbi, <span class="keyword">sizeof</span>(mbi)) <span class="operator">==</span> <span class="keyword">sizeof</span>(mbi)) {
+    <span class="comment">// Only read committed, readable memory</span>
+    <span class="keyword">if</span> (mbi.State <span class="operator">==</span> <span class="type">MEM_COMMIT</span> <span class="operator">&&</span> 
+        (mbi.Protect <span class="operator">&</span> (<span class="type">PAGE_READONLY</span> <span class="operator">|</span> <span class="type">PAGE_READWRITE</span> <span class="operator">|</span> 
+                      <span class="type">PAGE_EXECUTE_READ</span> <span class="operator">|</span> <span class="type">PAGE_EXECUTE_READWRITE</span>))) {
+        
+        <span class="function">printf</span>(<span class="string">"Region: 0x%p | Size: %llu | Protect: 0x%X\n"</span>,
+               mbi.BaseAddress,
+               (<span class="keyword">unsigned long long</span>)mbi.RegionSize,
+               mbi.Protect);
+    }
+    
+    <span class="comment">// Move to next region</span>
+    addr <span class="operator">=</span> (<span class="keyword">unsigned char</span><span class="operator">*</span>)mbi.BaseAddress <span class="operator">+</span> mbi.RegionSize;
+}</code></pre>
+
+                <p>The <code>MEMORY_BASIC_INFORMATION</code> structure reveals base address, allocation base, region size, memory state (<code>MEM_COMMIT</code>, <code>MEM_RESERVE</code>, <code>MEM_FREE</code>), protection flags (<code>PAGE_READWRITE</code>, <code>PAGE_EXECUTE</code>, etc.), and memory type (<code>MEM_IMAGE</code>, <code>MEM_MAPPED</code>, <code>MEM_PRIVATE</code>). This is how debuggers find executable code, how malware scanners locate injected DLLs, and how memory forensics tools reconstruct process state.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Native API: NtQueryInformationProcess</h2>
+                <p>When documented APIs aren't enough, the Native API comes to the rescue. <code>NtQueryInformationProcess</code> provides access to internal kernel structures that Win32 doesn't expose.</p>
+
+                <h3>Getting Parent PID and PEB Address</h3>
+                <pre><code><span class="comment">// Load function dynamically (not in standard headers)</span>
+<span class="type">HMODULE</span> ntdll <span class="operator">=</span> <span class="function">GetModuleHandleW</span>(<span class="string">L"ntdll.dll"</span>);
+<span class="type">pNtQueryInformationProcess</span> NtQueryInformationProcess <span class="operator">=</span> 
+    (<span class="type">pNtQueryInformationProcess</span>)<span class="function">GetProcAddress</span>(ntdll, <span class="string">"NtQueryInformationProcess"</span>);
+
+<span class="type">HANDLE</span> hProcess <span class="operator">=</span> <span class="function">GetCurrentProcess</span>();
+
+<span class="comment">// Query basic information</span>
+<span class="type">PROCESS_BASIC_INFORMATION</span> pbi;
+<span class="type">ULONG</span> retLen;
+<span class="type">NTSTATUS</span> status <span class="operator">=</span> <span class="function">NtQueryInformationProcess</span>(
+    hProcess,
+    <span class="type">ProcessBasicInformation</span>,
+    <span class="operator">&</span>pbi,
+    <span class="keyword">sizeof</span>(pbi),
+    <span class="operator">&</span>retLen
+);
+
+<span class="keyword">if</span> (<span class="function">NT_SUCCESS</span>(status)) {
+    <span class="function">printf</span>(<span class="string">"Current PID: %lu\n"</span>, <span class="function">GetCurrentProcessId</span>());
+    <span class="function">printf</span>(<span class="string">"Parent PID: %lu\n"</span>, (<span class="type">ULONG</span>)(<span class="type">ULONG_PTR</span>)pbi.InheritedFromUniqueProcessId);
+    <span class="function">printf</span>(<span class="string">"PEB Address: %p\n"</span>, pbi.PebBaseAddress);
+}</code></pre>
+
+                <h3>Reading Process Command Line from PEB</h3>
+                <pre><code><span class="comment">// Read PEB structure</span>
+<span class="type">PEB</span> peb;
+<span class="keyword">if</span> (<span class="function">ReadProcessMemory</span>(hProcess, pbi.PebBaseAddress, <span class="operator">&</span>peb, <span class="keyword">sizeof</span>(peb), <span class="type">NULL</span>)) {
+    <span class="type">RTL_USER_PROCESS_PARAMETERS</span> upp;
+    
+    <span class="comment">// Read process parameters</span>
+    <span class="keyword">if</span> (<span class="function">ReadProcessMemory</span>(hProcess, peb.ProcessParameters, <span class="operator">&</span>upp, <span class="keyword">sizeof</span>(upp), <span class="type">NULL</span>)) {
+        <span class="type">UNICODE_STRING</span> cmdLine <span class="operator">=</span> upp.CommandLine;
+        <span class="type">WCHAR</span><span class="operator">*</span> buffer <span class="operator">=</span> (<span class="type">WCHAR</span><span class="operator">*</span>)<span class="function">malloc</span>(cmdLine.Length <span class="operator">+</span> <span class="number">2</span>);
+        
+        <span class="comment">// Read command line string</span>
+        <span class="keyword">if</span> (<span class="function">ReadProcessMemory</span>(hProcess, cmdLine.Buffer, buffer, cmdLine.Length, <span class="type">NULL</span>)) {
+            buffer[cmdLine.Length <span class="operator">/</span> <span class="keyword">sizeof</span>(<span class="type">WCHAR</span>)] <span class="operator">=</span> <span class="number">0</span>;
+            <span class="function">wprintf</span>(<span class="string">L"Command Line: %s\n"</span>, buffer);
+        }
+        <span class="function">free</span>(buffer);
+    }
+}</code></pre>
+
+                <p>The PEB (Process Environment Block) is a goldmine of information. Beyond command line, it contains current directory, environment variables, loaded modules list, heap information, and process startup flags. This technique requires <code>PROCESS_VM_READ</code> access and is commonly used by debuggers and process exploration tools.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Native API: NtQueryVirtualMemory</h2>
+                <p>While <code>VirtualQueryEx</code> is documented, its native counterpart <code>NtQueryVirtualMemory</code> provides additional information classes not exposed through Win32.</p>
+
+                <h3>How It Works</h3>
+                <p>Offers more detailed memory region information than the Win32 equivalent.</p>
+
+                <pre><code><span class="type">HMODULE</span> ntdll <span class="operator">=</span> <span class="function">GetModuleHandleW</span>(<span class="string">L"ntdll.dll"</span>);
+<span class="type">pNtQueryVirtualMemory</span> NtQueryVirtualMemory <span class="operator">=</span> 
+    (<span class="type">pNtQueryVirtualMemory</span>)<span class="function">GetProcAddress</span>(ntdll, <span class="string">"NtQueryVirtualMemory"</span>);
+
+<span class="type">MEMORY_BASIC_INFORMATION</span> mbi;
+<span class="type">PVOID</span> address <span class="operator">=</span> <span class="number">0</span>;
+
+<span class="function">printf</span>(<span class="string">"BaseAddress        Size        State     Protect\n"</span>);
+<span class="function">printf</span>(<span class="string">"----------------------------------------------------\n"</span>);
+
+<span class="keyword">while</span> (<span class="function">NtQueryVirtualMemory</span>(
+    <span class="function">GetCurrentProcess</span>(),
+    address,
+    <span class="type">MemoryBasicInformation</span>,
+    <span class="operator">&</span>mbi,
+    <span class="keyword">sizeof</span>(mbi),
+    <span class="type">NULL</span>
+) <span class="operator">==</span> <span class="type">STATUS_SUCCESS</span>)
+{
+    <span class="function">printf</span>(<span class="string">"%p  %8zu  0x%08X  0x%08X\n"</span>,
+        mbi.BaseAddress,
+        mbi.RegionSize,
+        mbi.State,
+        mbi.Protect
+    );
+
+    address <span class="operator">=</span> (<span class="type">PBYTE</span>)mbi.BaseAddress <span class="operator">+</span> mbi.RegionSize;
+}</code></pre>
+
+                <p>Beyond <code>MemoryBasicInformation</code>, we can query <code>MemoryMappedFilenameInformation</code> to get the file backing a memory region, <code>MemoryImageInformation</code> for PE header details, and <code>MemoryWorkingSetExInformation</code> for paging statistics. These are used by memory forensics tools and advanced debuggers.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Native API: NtQueryObject</h2>
+                <p>Handles are opaque references to kernel objects. <code>NtQueryObject</code> lets us introspect what a handle actually points to.</p>
+
+                <h3>Querying Handle Information</h3>
+                <pre><code><span class="comment">// Open a file to get a handle</span>
+<span class="type">HANDLE</span> hFile <span class="operator">=</span> <span class="function">CreateFileW</span>(
+    <span class="string">L"C:\\Windows\\System32\\notepad.exe"</span>, 
+    <span class="type">GENERIC_READ</span>, 
+    <span class="type">FILE_SHARE_READ</span>, 
+    <span class="type">NULL</span>, 
+    <span class="type">OPEN_EXISTING</span>, 
+    <span class="number">0</span>, 
+    <span class="type">NULL</span>
+);
+
+<span class="comment">// Load NtQueryObject</span>
+<span class="type">pNtQueryObject</span> NtQueryObject <span class="operator">=</span>
+    (<span class="type">pNtQueryObject</span>)<span class="function">GetProcAddress</span>(
+        <span class="function">GetModuleHandleW</span>(<span class="string">L"ntdll.dll"</span>),
+        <span class="string">"NtQueryObject"</span>
+    );
+
+<span class="type">BYTE</span> buffer[<span class="number">1024</span>];
+<span class="type">ULONG</span> returnLength <span class="operator">=</span> <span class="number">0</span>;
+
+<span class="type">NTSTATUS</span> status <span class="operator">=</span> <span class="function">NtQueryObject</span>(
+    hFile,
+    <span class="type">ObjectNameInformation</span>,
+    buffer,
+    <span class="keyword">sizeof</span>(buffer),
+    <span class="operator">&</span>returnLength
+);
+
+<span class="keyword">if</span> (<span class="function">NT_SUCCESS</span>(status)) {
+    <span class="type">POBJECT_NAME_INFORMATION</span> nameInfo <span class="operator">=</span>
+        (<span class="type">POBJECT_NAME_INFORMATION</span>)buffer;
+
+    <span class="function">wprintf</span>(<span class="string">L"Object name: %wZ\n"</span>, <span class="operator">&</span>nameInfo<span class="operator">-></span>Name);
+}
+
+<span class="function">CloseHandle</span>(hFile);</code></pre>
+
+                <p>This reveals the NT path of the object, which is different from Win32 paths. File handles show paths like <code>\Device\HarddiskVolume2\Windows\System32\notepad.exe</code>. We can also query <code>ObjectTypeInformation</code> to get the object type (File, Process, Thread, Event, etc.) and <code>ObjectBasicInformation</code> for reference counts and handle attributes.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Querying Process Security Mitigations</h2>
+                <p>Modern Windows enforces various security mitigations to prevent exploitation. <code>GetProcessMitigationPolicy</code> lets us check which protections are enabled.</p>
+
+                <h3>How It Works</h3>
+                <p>Query DEP, ASLR, CFG, and other exploit mitigations.</p>
+
+                <pre><code><span class="type">PROCESS_MITIGATION_DEP_POLICY</span> dep <span class="operator">=</span> {<span class="number">0</span>};
+<span class="type">PROCESS_MITIGATION_ASLR_POLICY</span> aslr <span class="operator">=</span> {<span class="number">0</span>};
+<span class="type">PROCESS_MITIGATION_CONTROL_FLOW_GUARD_POLICY</span> cfg <span class="operator">=</span> {<span class="number">0</span>};
+
+<span class="type">HANDLE</span> hProcess <span class="operator">=</span> <span class="function">GetCurrentProcess</span>();
+
+<span class="comment">// Load function dynamically</span>
+<span class="type">pGetProcessMitigationPolicy</span> GetProcessMitigationPolicy <span class="operator">=</span> 
+    (<span class="type">pGetProcessMitigationPolicy</span>)<span class="function">GetProcAddress</span>(
+        <span class="function">GetModuleHandleW</span>(<span class="string">L"kernel32.dll"</span>), 
+        <span class="string">"GetProcessMitigationPolicy"</span>
+    );
+
+<span class="comment">// DEP (Data Execution Prevention)</span>
+<span class="keyword">if</span> (<span class="function">GetProcessMitigationPolicy</span>(hProcess, <span class="type">ProcessDEPPolicy</span>, <span class="operator">&</span>dep, <span class="keyword">sizeof</span>(dep))) {
+    <span class="function">printf</span>(<span class="string">"DEP Enabled: %s\n"</span>, dep.Enable <span class="operator">?</span> <span class="string">"Yes"</span> <span class="operator">:</span> <span class="string">"No"</span>);
+    <span class="function">printf</span>(<span class="string">"DEP Permanent: %s\n"</span>, dep.Permanent <span class="operator">?</span> <span class="string">"Yes"</span> <span class="operator">:</span> <span class="string">"No"</span>);
+}
+
+<span class="comment">// ASLR (Address Space Layout Randomization)</span>
+<span class="keyword">if</span> (<span class="function">GetProcessMitigationPolicy</span>(hProcess, <span class="type">ProcessASLRPolicy</span>, <span class="operator">&</span>aslr, <span class="keyword">sizeof</span>(aslr))) {
+    <span class="function">printf</span>(<span class="string">"ASLR Enabled: %s\n"</span>, aslr.EnableForceRelocateImages <span class="operator">?</span> <span class="string">"Yes"</span> <span class="operator">:</span> <span class="string">"No"</span>);
+}
+
+<span class="comment">// CFG (Control Flow Guard)</span>
+<span class="keyword">if</span> (<span class="function">GetProcessMitigationPolicy</span>(hProcess, <span class="type">ProcessControlFlowGuardPolicy</span>, <span class="operator">&</span>cfg, <span class="keyword">sizeof</span>(cfg))) {
+    <span class="function">printf</span>(<span class="string">"CFG Enabled: %s\n"</span>, cfg.EnableControlFlowGuard <span class="operator">?</span> <span class="string">"Yes"</span> <span class="operator">:</span> <span class="string">"No"</span>);
+}</code></pre>
+
+                <p>Other policies we can query include <code>ProcessDynamicCodePolicy</code> (prevents dynamic code generation), <code>ProcessSignaturePolicy</code> (Microsoft-signed binaries only), <code>ProcessImageLoadPolicy</code> (restricts DLL loading), and <code>ProcessReturnFlowGuardPolicy</code> (RFG protection). This is crucial for security assessment and exploit development research.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Mapping Windows to PIDs</h2>
+                <p>Ever wanted to know which process owns a specific window? <code>GetWindowThreadProcessId</code> makes this trivial.</p>
+
+                <h3>How It Works</h3>
+                <p>Enumerate all windows and retrieve their associated PIDs.</p>
+
+                <pre><code><span class="type">BOOL CALLBACK</span> <span class="function">EnumWindowsProc</span>(<span class="type">HWND</span> hwnd, <span class="type">LPARAM</span> lParam)
+{
+    <span class="type">DWORD</span> pid <span class="operator">=</span> <span class="number">0</span>;
+
+    <span class="comment">// Get the process ID for this window</span>
+    <span class="function">GetWindowThreadProcessId</span>(hwnd, <span class="operator">&</span>pid);
+
+    <span class="comment">// Get window title</span>
+    <span class="type">WCHAR</span> title[<span class="number">256</span>];
+    <span class="function">GetWindowTextW</span>(hwnd, title, <span class="keyword">sizeof</span>(title)<span class="operator">/</span><span class="keyword">sizeof</span>(<span class="type">WCHAR</span>));
+
+    <span class="comment">// Only print visible windows with non-empty titles</span>
+    <span class="keyword">if</span> (<span class="function">IsWindowVisible</span>(hwnd) <span class="operator">&&</span> <span class="function">wcslen</span>(title) <span class="operator">></span> <span class="number">0</span>)
+    {
+        <span class="function">wprintf</span>(<span class="string">L"Window: \"%s\"  PID: %lu\n"</span>, title, pid);
+    }
+
+    <span class="keyword">return</span> <span class="type">TRUE</span>; <span class="comment">// Continue enumeration</span>
+}
+
+<span class="keyword">int</span> <span class="function">main</span>(<span class="keyword">void</span>)
+{
+    <span class="comment">// Enumerate all top-level windows</span>
+    <span class="function">EnumWindows</span>(EnumWindowsProc, <span class="number">0</span>);
+    <span class="keyword">return</span> <span class="number">0</span>;
+}</code></pre>
+
+                <p>This technique is used by task managers to show which windows belong to which processes. The function also returns the thread ID that created the window, useful for understanding window message routing. We can combine this with <code>GetWindowThreadProcessId</code> and <code>OpenProcess</code> to build complete process-to-window mapping tools.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">API Comparison Matrix</h2>
+                
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>API</th>
+                            <th>Information Provided</th>
+                            <th>Access Rights Required</th>
+                            <th>Documentation Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>QueryFullProcessImageName</strong></td>
+                            <td>Full executable path</td>
+                            <td>PROCESS_QUERY_LIMITED_INFORMATION</td>
+                            <td>Documented, stable</td>
+                        </tr>
+                        <tr>
+                            <td><strong>IsWow64Process</strong></td>
+                            <td>32-bit vs 64-bit detection</td>
+                            <td>PROCESS_QUERY_INFORMATION</td>
+                            <td>Documented, stable</td>
+                        </tr>
+                        <tr>
+                            <td><strong>OpenProcessToken + GetTokenInformation</strong></td>
+                            <td>User SID, privileges, groups, integrity</td>
+                            <td>TOKEN_QUERY</td>
+                            <td>Documented, stable</td>
+                        </tr>
+                        <tr>
+                            <td><strong>VirtualQueryEx</strong></td>
+                            <td>Memory regions, protection flags</td>
+                            <td>PROCESS_QUERY_INFORMATION + PROCESS_VM_READ</td>
+                            <td>Documented, stable</td>
+                        </tr>
+                        <tr>
+                            <td><strong>NtQueryInformationProcess</strong></td>
+                            <td>Parent PID, PEB address, command line</td>
+                            <td>PROCESS_QUERY_INFORMATION + PROCESS_VM_READ</td>
+                            <td>Undocumented, may change</td>
+                        </tr>
+                        <tr>
+                            <td><strong>NtQueryVirtualMemory</strong></td>
+                            <td>Extended memory info, mapped files</td>
+                            <td>PROCESS_QUERY_INFORMATION + PROCESS_VM_READ</td>
+                            <td>Undocumented, may change</td>
+                        </tr>
+                        <tr>
+                            <td><strong>NtQueryObject</strong></td>
+                            <td>Handle name, type, attributes</td>
+                            <td>Depends on object type</td>
+                            <td>Undocumented, may change</td>
+                        </tr>
+                        <tr>
+                            <td><strong>GetProcessMitigationPolicy</strong></td>
+                            <td>DEP, ASLR, CFG, code policy</td>
+                            <td>PROCESS_QUERY_INFORMATION</td>
+                            <td>Documented, Windows 8+</td>
+                        </tr>
+                        <tr>
+                            <td><strong>GetWindowThreadProcessId</strong></td>
+                            <td>Window owner PID, thread ID</td>
+                            <td>None (window handle only)</td>
+                            <td>Documented, stable</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Practical Considerations</h2>
+                
+                <h3>Access Rights and Privileges</h3>
+                <p>Not all processes are accessible to all users. System processes like <code>csrss.exe</code> and protected processes require administrative privileges or specific access tokens. Always handle <code>ERROR_ACCESS_DENIED</code> gracefully.</p>
+
+                <h3>32-bit vs 64-bit Boundaries</h3>
+                <p>A 32-bit process cannot fully inspect a 64-bit process. Memory addresses are truncated, and some native APIs behave differently. Use <code>IsWow64Process</code> to detect this situation and handle it appropriately.</p>
+
+                <h3>Error Handling Best Practices</h3>
+                <p>Always check return values. For Win32 APIs, check for <code>FALSE</code> and call <code>GetLastError</code>. For Native APIs, check <code>NTSTATUS</code> codes with <code>NT_SUCCESS</code> macro. Common errors include <code>STATUS_INFO_LENGTH_MISMATCH</code> (buffer too small), <code>STATUS_ACCESS_DENIED</code> (insufficient privileges), and <code>STATUS_INVALID_PARAMETER</code> (bad arguments).</p>
+
+                <h3>Dynamic Function Loading</h3>
+                <p>Native APIs require dynamic loading via <code>GetProcAddress</code> because they're not in standard import libraries. Always check if the function pointer is valid before calling. Store function pointers globally to avoid repeated <code>GetProcAddress</code> calls.</p>
+
+                <h3>Memory Management</h3>
+                <p>APIs like <code>GetTokenInformation</code> require two-pass calls: first to get buffer size, then to retrieve data. Always free allocated memory with <code>free</code> for <code>malloc</code> allocations and <code>LocalFree</code> for API-allocated memory like <code>ConvertSidToStringSid</code>.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Building a Complete Process Inspector</h2>
+                <p>Combining these techniques lets us build comprehensive process inspection tools. Here's a typical workflow:</p>
+                
+                <ol>
+                    <li><strong>Enumerate processes</strong> using <code>CreateToolhelp32Snapshot</code> or <code>EnumProcesses</code></li>
+                    <li><strong>Open process handle</strong> with appropriate access rights</li>
+                    <li><strong>Query basic info:</strong> PID, image path, architecture</li>
+                    <li><strong>Query security context:</strong> token information, user SID, privileges</li>
+                    <li><strong>Query memory layout:</strong> enumerate regions, identify executable code</li>
+                    <li><strong>Query advanced info:</strong> parent process, command line, security mitigations</li>
+                    <li><strong>Map to UI elements:</strong> associate windows with processes</li>
+                </ol>
+
+                <p>This approach is used by tools like Process Explorer, Process Hacker, and Windows Task Manager. Each layer reveals more detail about what's actually running on the system.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Security and Detection Implications</h2>
+                
+                <h3>What Gets Monitored</h3>
+                <p>Endpoint Detection and Response (EDR) systems monitor process inspection heavily. Opening processes with <code>PROCESS_VM_READ</code> or <code>PROCESS_VM_WRITE</code> generates security events. Reading memory from system processes is a strong indicator of malicious activity.</p>
+
+                <h3>Stealth Considerations</h3>
+                <p>Using documented Win32 APIs generates less suspicion than native APIs. <code>QueryFullProcessImageName</code> is normal; reading command lines from PEB is suspicious. Enumerating all processes is common; opening every process to read memory is a red flag.</p>
+
+                <h3>Legitimate Use Cases</h3>
+                <p>These techniques are used by debuggers, performance monitors, system administration tools, and security software. The key difference is intent and behavior pattern. Legitimate tools typically focus on specific processes, while malware scans everything looking for targets.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">References</h2>
+                <div class="breadcrumb">
+                    <ul>
+                        <li><a href="https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-queryfullprocessimagenamew" style="color: var(--amber); text-decoration: none;">QueryFullProcessImageName - Microsoft Docs</a></li>
+                        <li><a href="https://learn.microsoft.com/en-us/windows/win32/api/wow64apiset/nf-wow64apiset-iswow64process" style="color: var(--amber); text-decoration: none;">IsWow64Process - Microsoft Docs</a></li>
+                        <li><a href="https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-gettokeninformation" style="color: var(--amber); text-decoration: none;">GetTokenInformation - Microsoft Docs</a></li>
+                        <li><a href="https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualqueryex" style="color: var(--amber); text-decoration: none;">VirtualQueryEx - Microsoft Docs</a></li>
+                        <li><a href="http://undocumented.ntinternals.net/" style="color: var(--amber); text-decoration: none;">Undocumented NT API Reference</a></li>
+                        <li><a href="https://github.com/0x06k/Ring-3-to-Ring-0" style="color: var(--amber); text-decoration: none;">Github Code Repo</a></li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">What's Next</h2>
+                <p>The next post will explore <strong>process module enumeration APIs</strong>.</p>
+            </section>
+        </article>
+
+        <nav class="post-navigation">
+            <a href="windows-internel-post2.html" class="nav-button">
+                <span class="nav-label">← Previous Post</span>
+                <span class="nav-title">Process Enumeration in Windows</span>
+            </a>
+            <a href="" class="nav-button">
+                <span class="nav-label">Next Post →</span>
+                <span class="nav-title">No Post Yet, Comming Soon</span>
+            </a>
+        </nav>
+    </div>
+    <script src="posts.js"></script>
+    <script>
+        const POST_CONFIG = {
+            id: 'process-information-extraction',
+            category: 'maldev',
+            title: 'Extracting Process Information: Windows API Deep Dive',
+            date: 'December 28, 2025',
+            readTime: '15 min read'
+        };
+
+        const categoriesInfo = categoryInfo;
+
+        function initializePage() {
+            const category = POST_CONFIG.category;
+            const categoryData = categoriesInfo[category];
+            
+            if (!categoryData) {
+                console.error('Invalid category:', category);
+                return;
+            }
+
+            const categoryLink = document.getElementById('category-link');
+            const categoryUrl = `category.html?category=${category}`;
+            categoryLink.innerHTML = `<a href="${categoryUrl}">${categoryData.title.toUpperCase()}</a>`;
+            
+            const slug = POST_CONFIG.title
+                .toUpperCase()
+                .replace(/[^A-Z0-9\s]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .split(' ')
+                .slice(0, 3)
+                .join(' ');
+            document.getElementById('post-slug').textContent = slug;
+
+            document.getElementById('post-title').textContent = POST_CONFIG.title;
+            document.getElementById('post-date').textContent = POST_CONFIG.date;
+            document.getElementById('post-read-time').textContent = POST_CONFIG.readTime;
+            
+            const badge = document.getElementById('post-category-badge');
+            badge.textContent = categoryData.title.toUpperCase();
+            badge.className = `category-badge ${category}`;
+            
+            document.title = `${POST_CONFIG.title} // 0x06k`;
+        }
+
+        initializePage();
+    </script>
+</body>
+</html>
