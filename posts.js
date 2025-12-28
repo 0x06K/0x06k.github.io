@@ -24,7 +24,7 @@ const allPosts = {
             title: 'Process Enumeration - Stalking Your Own Computer',
             date: '2025-12-28',
             desc: 'Process Enumeration Through WinAPIs. #ProcessEnumeration #WinAPI #WindowsInternals #ProcessManagement #WindowsProgramming #SystemProgramming #CProgramming',
-            link: 'windows-internel-post1.html'
+            link: 'windows-internel-post2.html'
         }
     ],
     pentest: [
