@@ -15,22 +15,28 @@ const allPosts = {
     ],
     maldev:[
         {
-            title: '(Welcome to the Blog)',
+            title: 'Welcome to the Blog - Windows Internals for Malware Development',
             date: '2025-12-27',
-            desc: 'Learning Windows Internels for Malware Development. #WindowsInternals #MalwareDevelopment #MalwareResearch #ReverseEngineering #CyberSecurity #RedTeam #OffensiveSecurity #ExploitDevelopment #WindowsSecurity #LowLevelProgramming #SecurityResearch #Infosec #EthicalHacking #ThreatResearch #x64 #Assembly #KernelDevelopment',
+            desc: 'Learning Windows Internals for Malware Development and Security Research. #WindowsInternals #MalwareDevelopment #ReverseEngineering #OffensiveSecurity #RedTeam #SecurityResearch #ThreatIntelligence',
             link: 'windows-internel-post1.html'
         },
         {
-            title: '(Process Enumeration - Stalking Your Own Computer)',
+            title: 'Process Enumeration in Windows: CreateToolhelp32Snapshot and PSAPI',
             date: '2025-12-28',
-            desc: 'Process Enumeration Through WinAPIs. #ProcessEnumeration #WinAPI #WindowsInternals #ProcessManagement #WindowsProgramming #SystemProgramming #CProgramming',
+            desc: 'Exploring Windows APIs for Process Enumeration: CreateToolhelp32Snapshot, EnumProcesses, and NtQuerySystemInformation. #ProcessEnumeration #CreateToolhelp32Snapshot #PSAPI #NtQuerySystemInformation #WindowsAPI #ToolHelpAPI #WindowsInternals',
             link: 'windows-internel-post2.html'
         },
         {
-            title: '(Process Memory Inspection)',
+            title: 'Process Information Extraction: QueryFullProcessImageName and NtQueryInformationProcess',
             date: '2025-12-29',
-            desc: 'Process Enumeration Through WinAPIs. #WinAPI #WindowsInternals #ProcessManagement #WindowsProgramming #SystemProgramming #CProgramming',
+            desc: 'Extracting Process Information using Windows APIs: GetProcessTimes, QueryFullProcessImageName, and NtQueryInformationProcess. #ProcessInformation #QueryFullProcessImageName #NtQueryInformationProcess #GetProcessTimes #ProcessMemory #WindowsInternals #WindowsAPI',
             link: 'windows-internel-post3.html'
+        },
+        {
+            title: 'Module Enumeration in Windows: CreateToolhelp32Snapshot and EnumProcessModules',
+            date: '2025-12-30',
+            desc: 'Enumerating Loaded Modules using Windows APIs: CreateToolhelp32Snapshot, EnumProcessModules, and Native API methods. #ModuleEnumeration #EnumProcessModules #CreateToolhelp32Snapshot #PSAPI #DLLEnumeration #NtQueryVirtualMemory #WindowsInternals #WoW64',
+            link: 'windows-internel-post4.html'
         }
     ],
     pentest: [

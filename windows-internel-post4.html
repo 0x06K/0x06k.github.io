@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Enumeration in Windows: Exploring the APIs // 0x06k</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --obsidian: #0a0a0f;
+            --ghost: #e8e8f0;
+            --blood: #9d00ff;
+            --amber: #00ffcc;
+            --gray-1: #1a1a2e;
+            --gray-2: #252541;
+            --gray-3: #3a3a5c;
+            --cyan: #00d4ff;
+            --green: #39ff14;
+            --orange: #ff6b35;
+            --magenta: #ff00ff;
+        }
+
+        body {
+            background: var(--obsidian);
+            color: var(--ghost);
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1.8;
+            overflow-x: hidden;
+        }
+
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            z-index: 0;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 2px, var(--amber) 2px, var(--amber) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, var(--blood) 2px, var(--blood) 4px);
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .blog-header {
+            background: transparent;
+            border: 1px solid var(--gray-3);
+            border-left: 4px solid var(--blood);
+            padding: 40px;
+            margin-bottom: 40px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .breadcrumb {
+            font-size: 11px;
+            color: var(--gray-3);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
+        .breadcrumb a {
+            color: var(--blood);
+            text-decoration: none;
+            transition: all 0.3s;
+            position: relative;
+            padding: 4px 8px;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .breadcrumb a::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--blood);
+            opacity: 0;
+            animation: pulse 2s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        .breadcrumb a::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: var(--amber);
+            transform: translate(-50%, -50%);
+            opacity: 0;
+        }
+
+        .breadcrumb a:hover {
+            color: var(--amber);
+            text-shadow: 0 0 10px var(--amber), 0 0 20px var(--amber);
+            transform: scale(1.05);
+        }
+
+        .breadcrumb a:hover::after {
+            animation: ripple 0.6s ease-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0;
+            }
+            50% {
+                opacity: 0.2;
+            }
+        }
+
+        @keyframes ripple {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 0.5;
+            }
+            100% {
+                width: 100px;
+                height: 100px;
+                opacity: 0;
+            }
+        }
+
+        @keyframes glow {
+            0%, 100% {
+                text-shadow: 0 0 5px var(--blood), 0 0 10px var(--blood);
+            }
+            50% {
+                text-shadow: 0 0 10px var(--blood), 0 0 20px var(--blood), 0 0 30px var(--amber);
+            }
+        }
+
+        .breadcrumb a {
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        .blog-title {
+            font-size: 42px;
+            color: var(--ghost);
+            font-weight: 700;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+            line-height: 1.2;
+        }
+
+        .blog-title::before {
+            content: '$ ';
+            color: var(--blood);
+        }
+
+        .blog-meta {
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding-top: 20px;
+            border-top: 1px solid var(--gray-3);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .meta-item i {
+            color: var(--amber);
+        }
+
+        .category-badge {
+            padding: 5px 12px;
+            background: rgba(157, 0, 255, 0.1);
+            border: 1px solid var(--blood);
+            color: var(--blood);
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .blog-content {
+            animation: fadeInUp 0.6s ease-out 0.2s backwards;
+        }
+
+        .content-section {
+            background: transparent;
+            border: 1px solid var(--gray-3);
+            border-left: 2px solid var(--blood);
+            padding: 40px;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+
+        .content-section:hover {
+            border-left-color: var(--amber);
+            box-shadow: -3px 0 0 var(--amber), 0 5px 15px rgba(0, 255, 204, 0.1);
+            background: rgba(26, 26, 46, 0.1);
+        }
+
+        .section-header {
+            font-size: 24px;
+            color: var(--amber);
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-header::before {
+            content: '[#]';
+            color: var(--blood);
+            font-size: 20px;
+        }
+
+        .content-section h3 {
+            font-size: 18px;
+            color: var(--cyan);
+            font-weight: 600;
+            margin: 25px 0 15px 0;
+        }
+
+        .content-section p {
+            margin-bottom: 20px;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .content-section p:last-child {
+            margin-bottom: 0;
+        }
+
+        .content-section ul {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        .content-section li {
+            margin-bottom: 10px;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .content-section li::marker {
+            color: var(--blood);
+        }
+
+        .content-section strong {
+            color: var(--amber);
+            font-weight: 600;
+        }
+
+        .content-section code {
+            background: rgba(157, 0, 255, 0.1);
+            color: var(--amber);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
+        pre {
+            background: var(--gray-1);
+            border: 1px solid var(--gray-3);
+            border-left: 3px solid var(--blood);
+            padding: 20px;
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        pre code {
+            background: none;
+            color: var(--ghost);
+            padding: 0;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .keyword { color: #ff79c6; }
+        .type { color: #8be9fd; }
+        .function { color: #50fa7b; }
+        .string { color: #f1fa8c; }
+        .comment { color: #6272a4; font-style: italic; }
+        .number { color: #bd93f9; }
+        .operator { color: #ff79c6; }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 13px;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid var(--gray-3);
+        }
+
+        .comparison-table th {
+            background: var(--gray-2);
+            color: var(--amber);
+            font-weight: 600;
+        }
+
+        .comparison-table tr:hover {
+            background: rgba(26, 26, 46, 0.3);
+        }
+
+        .post-navigation {
+            display: flex;
+            gap: 20px;
+            margin-top: 60px;
+            animation: fadeInUp 0.6s ease-out 0.4s backwards;
+        }
+
+        .nav-button {
+            flex: 1;
+            background: transparent;
+            border: 1px solid var(--gray-3);
+            padding: 25px;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 204, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .nav-button:hover::before {
+            left: 100%;
+        }
+
+        .nav-button:hover {
+            border-color: var(--amber);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 255, 204, 0.2);
+            background: rgba(26, 26, 46, 0.3);
+        }
+
+        .nav-label {
+            font-size: 10px;
+            color: var(--gray-3);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .nav-title {
+            font-size: 14px;
+            color: var(--ghost);
+            font-weight: 600;
+        }
+
+        .nav-button:hover .nav-title {
+            color: var(--amber);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--blood);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--amber);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 15px;
+            }
+
+            .blog-header {
+                padding: 25px;
+            }
+
+            .blog-title {
+                font-size: 28px;
+            }
+
+            .content-section {
+                padding: 25px;
+            }
+
+            .section-header {
+                font-size: 20px;
+            }
+
+            .post-navigation {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="matrix-bg"></div>
+    
+    <div class="container">
+        <header class="blog-header">
+            <div class="breadcrumb">
+                <a href="index.html">HOME</a> / <span id="category-link"></span> / <span id="post-slug"></span>
+            </div>
+            
+            <h1 class="blog-title" id="post-title">Loading...</h1>
+            
+            <div class="blog-meta">
+                <div class="meta-item">
+                    <i class="fas fa-calendar"></i>
+                    <span id="post-date">Loading...</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-clock"></i>
+                    <span id="post-read-time">18 min read</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-user"></i>
+                    <span>0x06k</span>
+                </div>
+                <span class="category-badge" id="post-category-badge">LOADING</span>
+            </div>
+        </header>
+
+        <article class="blog-content">
+            <section class="content-section">
+                <h2 class="section-header">Introduction</h2>
+                <p>We've covered process enumeration and process information extraction. Now we need to go one level deeper—what's actually loaded inside these processes? Every process loads multiple modules (DLLs and executables) into its memory space, and Windows gives us several APIs to enumerate them.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Method 1: Tool Help API (CreateToolhelp32Snapshot)</h2>
+                <p>We already know <code>CreateToolhelp32Snapshot</code> from process enumeration. It turns out this same API handles module enumeration too, just with a different flag.</p>
+
+                <h3>How It Works</h3>
+                <p>Instead of <code>TH32CS_SNAPPROCESS</code>, we use <code>TH32CS_SNAPMODULE</code>. The key difference is we must specify a process ID—we're taking a snapshot of modules within a specific process, not all modules system-wide.</p>
+
+                <pre><code><span class="type">DWORD</span> pid <span class="operator">=</span> <span class="function">GetCurrentProcessId</span>();
+<span class="type">HANDLE</span> snap <span class="operator">=</span> <span class="function">CreateToolhelp32Snapshot</span>(<span class="type">TH32CS_SNAPMODULE</span>, pid);
+
+<span class="type">MODULEENTRY32</span> me;
+me.dwSize <span class="operator">=</span> <span class="keyword">sizeof</span>(<span class="type">MODULEENTRY32</span>);
+
+<span class="keyword">if</span>(<span class="function">Module32First</span>(snap, <span class="operator">&</span>me)){
+    <span class="keyword">do</span>{
+        <span class="comment">// Process each module</span>
+    } <span class="keyword">while</span>(<span class="function">Module32Next</span>(snap, <span class="operator">&</span>me));
+}
+
+<span class="function">CloseHandle</span>(snap);</code></pre>
+
+                <p>The iteration pattern is identical to process enumeration: <code>Module32First</code> for the first entry, <code>Module32Next</code> for the rest, checking for <code>FALSE</code> or <code>GetLastError() == ERROR_NO_MORE_FILES</code> to know when we're done.</p>
+
+                <p>The <code>MODULEENTRY32</code> structure contains process ID, base address, module size, module handle, module name, and full executable path. Everything we need in one structure with no follow-up API calls required.</p>
+
+                <p>On 64-bit Windows, to enumerate 64-bit modules from a 32-bit process, add the <code>TH32CS_SNAPMODULE32</code> flag. Without it, we get incomplete results or failures when crossing architecture boundaries.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Method 2: Process Status API (PSAPI)</h2>
+                <p>PSAPI provides <code>EnumProcessModules</code> as the "official" way to enumerate modules. Unlike Tool Help which snapshots everything at once, this API just gives us an array of module handles. We then query each handle individually for details.</p>
+
+                <h3>How It Works</h3>
+                <p><code>EnumProcessModules</code> fills an array with module handles.</p>
+
+                <pre><code><span class="type">HMODULE</span> modules[<span class="number">1024</span>];
+<span class="type">DWORD</span> needed;
+
+<span class="keyword">if</span>(<span class="function">EnumProcessModules</span>(<span class="function">GetCurrentProcess</span>(), modules, <span class="keyword">sizeof</span>(modules), <span class="operator">&</span>needed)){
+    <span class="keyword">int</span> count <span class="operator">=</span> needed <span class="operator">/</span> <span class="keyword">sizeof</span>(<span class="type">HMODULE</span>);
+    <span class="keyword">for</span>(<span class="keyword">int</span> i <span class="operator">=</span> <span class="number">0</span>; i <span class="operator">&lt;</span> count; i<span class="operator">++</span>){
+        <span class="comment">// modules[i] is an HMODULE we can query</span>
+    }
+}</code></pre>
+
+                <p>If our buffer is too small, the API succeeds but only fills what fits. We must check if <code>needed > sizeof(buffer)</code> and reallocate if needed. Use this when we need to query specific modules selectively or when we're already using other PSAPI functions.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Method 3: EnumProcessModulesEx - Architecture-Aware Version</h2>
+                <p><code>EnumProcessModulesEx</code> is identical to <code>EnumProcessModules</code> except it takes a filter flag that controls which modules we see.</p>
+
+                <h3>How It Works</h3>
+                <p>Filter flags control architecture-specific enumeration.</p>
+
+                <pre><code><span class="type">HANDLE</span> hProc <span class="operator">=</span> <span class="function">GetCurrentProcess</span>();
+<span class="type">HMODULE</span> modules[<span class="number">1024</span>];
+<span class="type">DWORD</span> needed;
+
+<span class="function">EnumProcessModulesEx</span>(
+    hProc, 
+    modules, 
+    <span class="keyword">sizeof</span>(modules), 
+    <span class="operator">&</span>needed,
+    <span class="type">LIST_MODULES_ALL</span>  <span class="comment">// The filter flag</span>
+);</code></pre>
+
+                <p>Filter flags include <code>LIST_MODULES_DEFAULT</code>, <code>LIST_MODULES_32BIT</code>, <code>LIST_MODULES_64BIT</code>, and <code>LIST_MODULES_ALL</code>. On 64-bit Windows, WoW64 processes load both 32-bit and 64-bit DLLs. Without <code>LIST_MODULES_ALL</code>, we only see the 32-bit ones.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Method 4: Getting Module Names and Details</h2>
+                <p>Once we have <code>HMODULE</code> handles from <code>EnumProcessModules</code>, we need to get their names and details using additional PSAPI functions.</p>
+
+                <h3>GetModuleBaseName and GetModuleFileNameEx</h3>
+                <p><code>GetModuleBaseName</code> returns just the filename without the path. <code>GetModuleFileNameEx</code> returns the full path.</p>
+
+                <pre><code><span class="keyword">char</span> name[<span class="type">MAX_PATH</span>] <span class="operator">=</span> {<span class="number">0</span>};
+<span class="function">GetModuleBaseNameA</span>(hProc, hModule, name, <span class="type">MAX_PATH</span>);
+<span class="comment">// Result: "kernel32.dll"</span>
+
+<span class="keyword">char</span> path[<span class="type">MAX_PATH</span>] <span class="operator">=</span> {<span class="number">0</span>};
+<span class="function">GetModuleFileNameExA</span>(hProc, hModule, path, <span class="type">MAX_PATH</span>);
+<span class="comment">// Result: "C:\Windows\System32\kernel32.dll"</span></code></pre>
+
+                <p>There's also <code>GetModuleFileName</code> without the "Ex". This one doesn't take a process handle and only works on our own process. When passed NULL as the module handle, it returns our own executable path.</p>
+
+                <h3>GetModuleInformation</h3>
+                <p><code>GetModuleInformation</code> fills a <code>MODULEINFO</code> structure with the module's memory layout details.</p>
+
+                <pre><code><span class="type">MODULEINFO</span> mi <span class="operator">=</span> {<span class="number">0</span>};
+<span class="keyword">if</span>(<span class="function">GetModuleInformation</span>(hProc, hModule, <span class="operator">&</span>mi, <span class="keyword">sizeof</span>(mi))){
+    <span class="comment">// mi.lpBaseOfDll - Base address in memory</span>
+    <span class="comment">// mi.SizeOfImage - Total size in bytes</span>
+    <span class="comment">// mi.EntryPoint - DLL entry point address</span>
+}</code></pre>
+
+                <p>Use this when we need memory addresses for modules. Essential for debuggers, profilers, and any tool that needs to map addresses to modules or calculate offsets.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Method 5: Native API (NtQueryInformationProcess)</h2>
+                <p>All the documented APIs we've seen eventually read from the PEB (Process Environment Block). We can skip the middleman and read it directly using native APIs.</p>
+
+                <h3>How It Works</h3>
+                <p>Query the PEB address directly from the process.</p>
+
+                <pre><code><span class="keyword">typedef</span> <span class="type">NTSTATUS</span> (<span class="type">NTAPI</span> <span class="operator">*</span><span class="type">pNtQueryInformationProcess</span>)(
+    <span class="type">HANDLE</span>, <span class="type">PROCESSINFOCLASS</span>, <span class="type">PVOID</span>, <span class="type">ULONG</span>, <span class="type">PULONG</span>);
+
+<span class="type">HMODULE</span> ntdll <span class="operator">=</span> <span class="function">GetModuleHandleA</span>(<span class="string">"ntdll.dll"</span>);
+<span class="type">pNtQueryInformationProcess</span> NtQIP <span class="operator">=</span> 
+    (<span class="type">pNtQueryInformationProcess</span>)<span class="function">GetProcAddress</span>(ntdll, <span class="string">"NtQueryInformationProcess"</span>);
+
+<span class="type">PROCESS_BASIC_INFORMATION</span> pbi <span class="operator">=</span> {<span class="number">0</span>};
+<span class="type">NTSTATUS</span> status <span class="operator">=</span> <span class="function">NtQIP</span>(
+    <span class="function">GetCurrentProcess</span>(), 
+    <span class="type">ProcessBasicInformation</span>, 
+    <span class="operator">&</span>pbi, 
+    <span class="keyword">sizeof</span>(pbi), 
+    <span class="type">NULL</span>
+);
+
+<span class="keyword">if</span>(status <span class="operator">==</span> <span class="number">0</span>) {
+    <span class="comment">// pbi.PebBaseAddress points to the PEB</span>
+}</code></pre>
+
+                <p>The <code>PebBaseAddress</code> field gives us a pointer to the PEB structure. From there, we can read <code>PEB.Ldr</code> to get the loader data, which contains three linked lists of modules. The documented APIs can be hooked by security software, debuggers, or malware. Reading the PEB directly is harder to intercept.</p>
+
+                <p>The PEB structure is undocumented and changes between Windows versions. Use this only when we need to detect API hooking or we're building security tools.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Method 6: NtQueryVirtualMemory - Memory Region Query</h2>
+                <p>Instead of enumerating modules explicitly, we can enumerate memory regions and identify which ones belong to modules.</p>
+
+                <h3>How It Works</h3>
+                <p>Query memory regions to identify module memory.</p>
+
+                <pre><code><span class="keyword">typedef</span> <span class="type">NTSTATUS</span> (<span class="type">NTAPI</span> <span class="operator">*</span><span class="type">NtQueryVirtualMemory_t</span>)(
+    <span class="type">HANDLE</span>, <span class="type">PVOID</span>, <span class="type">MEMORY_INFORMATION_CLASS</span>, <span class="type">PVOID</span>, <span class="type">SIZE_T</span>, <span class="type">PSIZE_T</span>);
+
+<span class="type">NtQueryVirtualMemory_t</span> NtQueryVirtualMemory <span class="operator">=</span>
+    (<span class="type">NtQueryVirtualMemory_t</span>)<span class="function">GetProcAddress</span>(
+        <span class="function">GetModuleHandleA</span>(<span class="string">"ntdll.dll"</span>),
+        <span class="string">"NtQueryVirtualMemory"</span>
+    );
+
+<span class="type">MEMORY_BASIC_INFORMATION</span> mbi;
+<span class="type">SIZE_T</span> retLen;
+
+<span class="type">NTSTATUS</span> status <span class="operator">=</span> <span class="function">NtQueryVirtualMemory</span>(
+    <span class="function">GetCurrentProcess</span>(),
+    baseAddress,  <span class="comment">// Address to query</span>
+    <span class="type">MemoryBasicInformation</span>,
+    <span class="operator">&</span>mbi,
+    <span class="keyword">sizeof</span>(mbi),
+    <span class="operator">&</span>retLen
+);</code></pre>
+
+                <p>Memory belonging to loaded modules has <code>Type == MEM_IMAGE</code>. The <code>AllocationBase</code> points to the module's base address. We can use <code>MemoryMappedFilenameInformation</code> class to get the file path, which returns NT paths like <code>\Device\HarddiskVolume2\Windows\System32\kernel32.dll</code>.</p>
+
+                <p>This approach is useful when we have a memory address and want to know which module it belongs to, or for detecting memory-only injections that don't register as normal modules.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Method 7: WoW64 APIs - Cross-Architecture Access</h2>
+                <p>32-bit code normally can't access 64-bit memory addresses because they don't fit in 32-bit pointers. Windows provides special APIs for this specific scenario.</p>
+
+                <h3>NtWow64QueryInformationProcess64</h3>
+                <p>This is the 64-bit version of <code>NtQueryInformationProcess</code> that 32-bit code can call.</p>
+
+                <pre><code><span class="keyword">typedef</span> <span class="type">NTSTATUS</span> (<span class="type">NTAPI</span> <span class="operator">*</span><span class="type">NtWow64QueryInformationProcess64_t</span>)(
+    <span class="type">HANDLE</span>, <span class="type">ULONG</span>, <span class="type">PVOID</span>, <span class="type">ULONG</span>, <span class="type">PULONG</span>);
+
+<span class="keyword">typedef struct</span> <span class="type">_PROCESS_BASIC_INFORMATION64</span> {
+    <span class="type">ULONGLONG</span> Reserved1;
+    <span class="type">ULONGLONG</span> PebBaseAddress;      <span class="comment">// 64-bit address as ULONGLONG</span>
+    <span class="type">ULONGLONG</span> Reserved2[<span class="number">2</span>];
+    <span class="type">ULONGLONG</span> UniqueProcessId;
+    <span class="type">ULONGLONG</span> Reserved3;
+} <span class="type">PROCESS_BASIC_INFORMATION64</span>;</code></pre>
+
+                <p>Addresses are <code>ULONGLONG</code> (64-bit integers) instead of pointers. We can store and manipulate these 64-bit values in 32-bit code; we just can't dereference them as pointers.</p>
+
+                <h3>NtWow64ReadVirtualMemory64</h3>
+                <p>Once we have 64-bit addresses, we need to read memory at those addresses.</p>
+
+                <pre><code><span class="keyword">typedef</span> <span class="type">NTSTATUS</span> (<span class="type">NTAPI</span> <span class="operator">*</span><span class="type">NtWow64ReadVirtualMemory64_t</span>)(
+    <span class="type">HANDLE</span>, <span class="type">ULONG64</span>, <span class="type">PVOID</span>, <span class="type">ULONG64</span>, <span class="type">PULONG64</span>);
+
+<span class="type">ULONG64</span> address64 <span class="operator">=</span> pbi.PebBaseAddress;
+<span class="type">BYTE</span> buffer[<span class="keyword">sizeof</span>(<span class="type">PEB64</span>)];
+<span class="type">ULONG64</span> bytesRead;
+
+<span class="type">NTSTATUS</span> status <span class="operator">=</span> <span class="function">NtWow64ReadVirtualMemory64</span>(
+    hProc,
+    address64,
+    buffer,
+    <span class="keyword">sizeof</span>(buffer),
+    <span class="operator">&</span>bytesRead
+);</code></pre>
+
+                <p>These functions only exist in 32-bit processes running on 64-bit Windows. Use this when building 32-bit tools that need to inspect 64-bit processes.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Method 8: LdrEnumerateLoadedModules - Undocumented Callback</h2>
+                <p>Deep in ntdll.dll is <code>LdrEnumerateLoadedModules</code>, an undocumented function that Windows' loader uses internally.</p>
+
+                <h3>How It Works</h3>
+                <p>Uses a callback pattern to enumerate modules.</p>
+
+                <pre><code><span class="keyword">typedef</span> <span class="type">NTSTATUS</span> (<span class="type">NTAPI</span> <span class="operator">*</span><span class="type">LdrEnumerateLoadedModules_t</span>)(
+    <span class="type">ULONG</span> Flags,
+    <span class="type">PVOID</span> Callback,
+    <span class="type">PVOID</span> Context
+);
+
+<span class="type">BOOLEAN NTAPI</span> <span class="function">EnumCallback</span>(
+    <span class="type">PLDR_DATA_TABLE_ENTRY</span> Module,
+    <span class="type">PVOID</span> Context,
+    <span class="type">BOOLEAN</span> <span class="operator">*</span>Stop
+){
+    <span class="comment">// Module points to the loader's internal structure</span>
+    <span class="keyword">return</span> <span class="type">TRUE</span>; <span class="comment">// Continue</span>
+}
+
+<span class="type">LdrEnumerateLoadedModules_t</span> LdrEnumerateLoadedModules <span class="operator">=</span>
+    (<span class="type">LdrEnumerateLoadedModules_t</span>)<span class="function">GetProcAddress</span>(
+        <span class="function">GetModuleHandleA</span>(<span class="string">"ntdll.dll"</span>),
+        <span class="string">"LdrEnumerateLoadedModules"</span>
+    );
+
+<span class="function">LdrEnumerateLoadedModules</span>(<span class="number">0</span>, EnumCallback, <span class="type">NULL</span>);</code></pre>
+
+                <p>We get direct pointers to the loader's own structures. No copying, no translation—this is Windows' internal view. However, this API is completely undocumented and will likely break in future Windows updates. Avoid this unless we have a very specific reason.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Method Comparison</h2>
+                
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Returns</th>
+                            <th>Follow-up Needed</th>
+                            <th>Best Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>CreateToolhelp32Snapshot</strong></td>
+                            <td>Complete MODULEENTRY32</td>
+                            <td>No</td>
+                            <td>General-purpose enumeration, stable and documented</td>
+                        </tr>
+                        <tr>
+                            <td><strong>EnumProcessModules</strong></td>
+                            <td>HMODULE array</td>
+                            <td>Yes</td>
+                            <td>Selective querying, PSAPI consistency</td>
+                        </tr>
+                        <tr>
+                            <td><strong>EnumProcessModulesEx</strong></td>
+                            <td>HMODULE array</td>
+                            <td>Yes</td>
+                            <td>WoW64 processes, architecture filtering</td>
+                        </tr>
+                        <tr>
+                            <td><strong>GetModuleBaseName</strong></td>
+                            <td>Filename string</td>
+                            <td>N/A</td>
+                            <td>Quick module identification</td>
+                        </tr>
+                        <tr>
+                            <td><strong>GetModuleFileNameEx</strong></td>
+                            <td>Full path string</td>
+                            <td>N/A</td>
+                            <td>Need file location on disk</td>
+                        </tr>
+                        <tr>
+                            <td><strong>GetModuleInformation</strong></td>
+                            <td>MODULEINFO struct</td>
+                            <td>N/A</td>
+                            <td>Memory addresses, size, entry point</td>
+                        </tr>
+                        <tr>
+                            <td><strong>NtQueryInformationProcess</strong></td>
+                            <td>PEB address</td>
+                            <td>Yes (read PEB)</td>
+                            <td>Security research, detecting hooks</td>
+                        </tr>
+                        <tr>
+                            <td><strong>NtQueryVirtualMemory</strong></td>
+                            <td>Memory region info</td>
+                            <td>Maybe</td>
+                            <td>Address-to-module mapping</td>
+                        </tr>
+                        <tr>
+                            <td><strong>WoW64 APIs</strong></td>
+                            <td>64-bit addresses/data</td>
+                            <td>Yes</td>
+                            <td>32-bit code inspecting 64-bit processes</td>
+                        </tr>
+                        <tr>
+                            <td><strong>LdrEnumerateLoadedModules</strong></td>
+                            <td>Callback with entries</td>
+                            <td>No</td>
+                            <td>Avoid unless necessary</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Practical Considerations</h2>
+                
+                <p>To enumerate modules in another process, we need <code>PROCESS_QUERY_INFORMATION</code> and <code>PROCESS_VM_READ</code> access rights. Protected processes block access regardless of privileges.</p>
+
+                <p>Always allocate enough buffer space. For PSAPI, query with NULL first to get required size, then allocate and query again. For Tool Help, the snapshot is fixed size.</p>
+
+                <p>Check every return value. Tool Help returns <code>INVALID_HANDLE_VALUE</code> on failure. PSAPI returns <code>FALSE</code>—call <code>GetLastError()</code>. Native APIs return <code>NTSTATUS</code>—use <code>NT_SUCCESS()</code> macro.</p>
+
+                <p>Native APIs require dynamic loading via <code>GetProcAddress</code>. Always check if the function pointer is valid before calling.</p>
+
+                <p>Modules load and unload dynamically. Handle gracefully when modules disappear during enumeration.</p>
+
+                <p>32-bit process can't fully enumerate 64-bit process without WoW64 APIs. 64-bit process needs the right flags to see WoW64 modules. Use <code>IsWow64Process</code> to detect architecture mismatches.</p>
+            </section>
+            <section class="content-section">
+                <h2 class="section-header">Summary: Capabilities and Structures</h2>
+                
+                <p>Each enumeration method provides different levels of detail through its structures. Understanding what information each API exposes helps choose the right tool for the job.</p>
+
+                <h3>MODULEENTRY32 (Tool Help API)</h3>
+                <p>The most complete single-call structure. Provides everything needed for basic module analysis without additional queries:</p>
+                <ul>
+                    <li><strong>th32ModuleID</strong> - Module identifier used by the debugger</li>
+                    <li><strong>th32ProcessID</strong> - Process ID owning this module</li>
+                    <li><strong>GlblcntUsage</strong> - Global usage count (deprecated, always 0xFFFF)</li>
+                    <li><strong>ProccntUsage</strong> - Process usage count (deprecated, always 0xFFFF)</li>
+                    <li><strong>modBaseAddr</strong> - Base memory address where module is loaded</li>
+                    <li><strong>modBaseSize</strong> - Size of module in bytes</li>
+                    <li><strong>hModule</strong> - Handle to the module</li>
+                    <li><strong>szModule[MAX_MODULE_NAME32 + 1]</strong> - Module filename (e.g., "kernel32.dll")</li>
+                    <li><strong>szExePath[MAX_PATH]</strong> - Full path to module on disk</li>
+                </ul>
+                <p>This structure gives complete module identity (name and path), memory layout (base address and size), and a handle for further operations—all in one snapshot. The deprecated usage count fields exist for backward compatibility but should be ignored.</p>
+
+                <h3>MODULEINFO (PSAPI)</h3>
+                <p>Focused on memory layout and execution. Obtained via <code>GetModuleInformation</code> after enumeration:</p>
+                <ul>
+                    <li><strong>lpBaseOfDll</strong> - Base address where the DLL is loaded in memory</li>
+                    <li><strong>SizeOfImage</strong> - Total size of the module in memory (includes all sections)</li>
+                    <li><strong>EntryPoint</strong> - Address of the DLL entry point function (DllMain)</li>
+                </ul>
+                <p>This structure is essential for memory-related operations. The base address lets us calculate offsets to specific functions or data. Size tells us the memory range the module occupies. Entry point reveals where initialization code executes—critical for debugging or analyzing module loading behavior.</p>
+
+                <h3>PROCESS_BASIC_INFORMATION (Native API)</h3>
+                <p>Gateway to the Process Environment Block. Returned by <code>NtQueryInformationProcess</code>:</p>
+                <ul>
+                    <li><strong>ExitStatus</strong> - Process exit code (STILL_ACTIVE if running)</li>
+                    <li><strong>PebBaseAddress</strong> - Pointer to the Process Environment Block</li>
+                    <li><strong>AffinityMask</strong> - Processor affinity mask</li>
+                    <li><strong>BasePriority</strong> - Base scheduling priority</li>
+                    <li><strong>UniqueProcessId</strong> - Process ID</li>
+                    <li><strong>InheritedFromUniqueProcessId</strong> - Parent process ID</li>
+                </ul>
+                <p>The key field is <code>PebBaseAddress</code>. The PEB contains <code>Ldr</code> (loader data), which points to three doubly-linked lists: InLoadOrderModuleList, InMemoryOrderModuleList, and InInitializationOrderModuleList. Each list contains <code>LDR_DATA_TABLE_ENTRY</code> structures with detailed module information including base address, size, full path, load count, and flags. This is Windows' internal representation before any API translation.</p>
+
+                <h3>MEMORY_BASIC_INFORMATION (Virtual Memory Query)</h3>
+                <p>Describes a single memory region. Used with <code>NtQueryVirtualMemory</code> or <code>VirtualQueryEx</code>:</p>
+                <ul>
+                    <li><strong>BaseAddress</strong> - Starting address of the region</li>
+                    <li><strong>AllocationBase</strong> - Base address of the allocation (module base for MEM_IMAGE)</li>
+                    <li><strong>AllocationProtect</strong> - Initial protection flags</li>
+                    <li><strong>RegionSize</strong> - Size of the region in bytes</li>
+                    <li><strong>State</strong> - MEM_COMMIT, MEM_RESERVE, or MEM_FREE</li>
+                    <li><strong>Protect</strong> - Current protection flags (PAGE_EXECUTE_READ, etc.)</li>
+                    <li><strong>Type</strong> - MEM_IMAGE (module), MEM_MAPPED (file mapping), or MEM_PRIVATE</li>
+                </ul>
+                <p>When <code>Type == MEM_IMAGE</code>, the region belongs to a loaded module. AllocationBase points to the module base. By walking memory from address 0 to max address and checking Type, we can discover all loaded modules. Protection flags reveal executable sections (code) versus data sections. This method catches modules that don't appear in standard enumerations, such as manually mapped DLLs or reflectively loaded code.</p>
+
+                <h3>LDR_DATA_TABLE_ENTRY (Loader Structures)</h3>
+                <p>Windows loader's internal module structure. Accessed via PEB or <code>LdrEnumerateLoadedModules</code>:</p>
+                <ul>
+                    <li><strong>InLoadOrderLinks</strong> - Linked list entry (load order)</li>
+                    <li><strong>InMemoryOrderLinks</strong> - Linked list entry (memory order)</li>
+                    <li><strong>InInitializationOrderLinks</strong> - Linked list entry (initialization order)</li>
+                    <li><strong>DllBase</strong> - Base address of the module</li>
+                    <li><strong>EntryPoint</strong> - Module entry point address</li>
+                    <li><strong>SizeOfImage</strong> - Size of the module in memory</li>
+                    <li><strong>FullDllName</strong> - UNICODE_STRING with full path</li>
+                    <li><strong>BaseDllName</strong> - UNICODE_STRING with filename only</li>
+                    <li><strong>Flags</strong> - Loader flags (static/dynamic, load in progress, etc.)</li>
+                    <li><strong>LoadCount</strong> - Reference count (how many times loaded)</li>
+                    <li><strong>TlsIndex</strong> - Thread Local Storage index</li>
+                </ul>
+                <p>This is the most detailed view available. The three linked lists let us enumerate in different orders—chronological loading, memory layout, or initialization sequence. Flags reveal loader state that documented APIs don't expose. LoadCount shows if a DLL is loaded multiple times or can be safely unloaded. This structure changes between Windows versions, so accessing it requires careful version detection.</p>
+
+                <h3>Cross-Architecture Structures (WoW64)</h3>
+                <p>64-bit versions of structures for 32-bit code. Critical for 32-bit tools inspecting 64-bit processes:</p>
+                <ul>
+                    <li><strong>PROCESS_BASIC_INFORMATION64</strong> - Uses ULONGLONG (64-bit integers) for all pointer fields</li>
+                    <li><strong>PEB64</strong> - 64-bit PEB structure with 64-bit pointers</li>
+                    <li><strong>LDR_DATA_TABLE_ENTRY64</strong> - 64-bit loader entries with 64-bit addresses</li>
+                </ul>
+                <p>Pointers become ULONGLONGs because 32-bit code can't hold 64-bit pointers in pointer variables. We store addresses as integers and use <code>NtWow64ReadVirtualMemory64</code> to read memory at those addresses. Structure field offsets differ between 32-bit and 64-bit versions due to alignment and pointer size differences. Hardcoding offsets breaks across Windows versions—use pattern scanning or documented APIs when possible.</p>
+
+                <h3>Choosing Based on Information Needs</h3>
+                <p>Use <strong>MODULEENTRY32</strong> when you need complete module information immediately—one call gives name, path, and memory layout. Use <strong>MODULEINFO</strong> when you need precise memory boundaries and entry points for analysis or instrumentation. Use <strong>PROCESS_BASIC_INFORMATION</strong> and PEB structures when you need to detect API hooking or access loader internals. Use <strong>MEMORY_BASIC_INFORMATION</strong> when you need to map addresses to modules or detect non-standard loading techniques. Use <strong>LDR_DATA_TABLE_ENTRY</strong> when you need loader-specific details like load order, reference counts, or initialization state.</p>
+
+                <p>Each structure represents a different layer of abstraction—from high-level documented APIs down to kernel structures. Understanding what each provides helps build efficient tools that query only what they need.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">References</h2>
+                <div class="breadcrumb">
+                    <ul>
+                        <li><a href="https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-createtoolhelp32snapshot" style="color: var(--amber); text-decoration: none;">CreateToolhelp32Snapshot - Microsoft Docs</a></li>
+                        <li><a href="https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-enumprocessmodules" style="color: var(--amber); text-decoration: none;">EnumProcessModules - Microsoft Docs</a></li>
+                        <li><a href="https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-getmoduleinformation" style="color: var(--amber); text-decoration: none;">GetModuleInformation - Microsoft Docs</a></li>
+                        <li><a href="http://undocumented.ntinternals.net/" style="color: var(--amber); text-decoration: none;">Undocumented NT API Reference</a></li>
+                        <li><a href="https://github.com/0x06k/Ring-3-to-Ring-0" style="color: var(--amber); text-decoration: none;">Github Code Repo</a></li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">What's Next</h2>
+                
+                <p>Now that we can enumerate processes, extract process information, and enumerate loaded modules, the next step is understanding what's actually executing inside those processes — <strong> thread enumeration and thread information extraction</strong>.</p>
+            </section>
+        </article>
+
+        <nav class="post-navigation">
+            <a href="process-information-extraction.html" class="nav-button">
+                <span class="nav-label">← Previous Post</span>
+                <span class="nav-title">Extracting Process Information</span>
+            </a>
+            <a href="#" class="nav-button">
+                <span class="nav-label">Next Post →</span>
+                <span class="nav-title">PE Header Parsing</span>
+            </a>
+        </nav>
+    </div>
+    <script src="posts.js"></script>
+    <script>
+        const POST_CONFIG = {
+            id: 'module-enumeration-windows',
+            category: 'maldev',
+            title: 'Module Enumeration',
+            date: 'December 30, 2025',
+            readTime: '18 min read'
+        };
+
+        const categoriesInfo = categoryInfo;
+
+        function initializePage() {
+            const category = POST_CONFIG.category;
+            const categoryData = categoriesInfo[category];
+            
+            if (!categoryData) {
+                console.error('Invalid category:', category);
+                return;
+            }
+
+            const categoryLink = document.getElementById('category-link');
+            const categoryUrl = `category.html?category=${category}`;
+            categoryLink.innerHTML = `<a href="${categoryUrl}">${categoryData.title.toUpperCase()}</a>`;
+            
+            const slug = POST_CONFIG.title
+                .toUpperCase()
+                .replace(/[^A-Z0-9\s]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .split(' ')
+                .slice(0, 3)
+                .join(' ');
+            document.getElementById('post-slug').textContent = slug;
+
+            document.getElementById('post-title').textContent = POST_CONFIG.title;
+            document.getElementById('post-date').textContent = POST_CONFIG.date;
+            document.getElementById('post-read-time').textContent = POST_CONFIG.readTime;
+            
+            const badge = document.getElementById('post-category-badge');
+            badge.textContent = categoryData.title.toUpperCase();
+            badge.className = `category-badge ${category}`;
+            
+            document.title = `${POST_CONFIG.title} // 0x06k`;
+        }
+
+        initializePage();
+    </script>
+</body>
+</html>
