@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thread Enumeration in Windows: A Complete Guide // 0x06k</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --obsidian: #0a0a0f;
+            --ghost: #e8e8f0;
+            --blood: #9d00ff;
+            --amber: #00ffcc;
+            --gray-1: #1a1a2e;
+            --gray-2: #252541;
+            --gray-3: #3a3a5c;
+            --cyan: #00d4ff;
+            --green: #39ff14;
+            --orange: #ff6b35;
+            --magenta: #ff00ff;
+        }
+
+        body {
+            background: var(--obsidian);
+            color: var(--ghost);
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1.8;
+            overflow-x: hidden;
+        }
+
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            z-index: 0;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 2px, var(--amber) 2px, var(--amber) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, var(--blood) 2px, var(--blood) 4px);
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .blog-header {
+            background: transparent;
+            border: 1px solid var(--gray-3);
+            border-left: 4px solid var(--blood);
+            padding: 40px;
+            margin-bottom: 40px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .breadcrumb {
+            font-size: 11px;
+            color: var(--gray-3);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
+        .breadcrumb a {
+            color: var(--blood);
+            text-decoration: none;
+            transition: all 0.3s;
+            position: relative;
+            padding: 4px 8px;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .breadcrumb a::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--blood);
+            opacity: 0;
+            animation: pulse 2s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        .breadcrumb a::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: var(--amber);
+            transform: translate(-50%, -50%);
+            opacity: 0;
+        }
+
+        .breadcrumb a:hover {
+            color: var(--amber);
+            text-shadow: 0 0 10px var(--amber), 0 0 20px var(--amber);
+            transform: scale(1.05);
+        }
+
+        .breadcrumb a:hover::after {
+            animation: ripple 0.6s ease-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0;
+            }
+            50% {
+                opacity: 0.2;
+            }
+        }
+
+        @keyframes ripple {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 0.5;
+            }
+            100% {
+                width: 100px;
+                height: 100px;
+                opacity: 0;
+            }
+        }
+
+        @keyframes glow {
+            0%, 100% {
+                text-shadow: 0 0 5px var(--blood), 0 0 10px var(--blood);
+            }
+            50% {
+                text-shadow: 0 0 10px var(--blood), 0 0 20px var(--blood), 0 0 30px var(--amber);
+            }
+        }
+
+        .breadcrumb a {
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        .blog-title {
+            font-size: 42px;
+            color: var(--ghost);
+            font-weight: 700;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+            line-height: 1.2;
+        }
+
+        .blog-title::before {
+            content: '$ ';
+            color: var(--blood);
+        }
+
+        .blog-meta {
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding-top: 20px;
+            border-top: 1px solid var(--gray-3);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .meta-item i {
+            color: var(--amber);
+        }
+
+        .category-badge {
+            padding: 5px 12px;
+            background: rgba(157, 0, 255, 0.1);
+            border: 1px solid var(--blood);
+            color: var(--blood);
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .blog-content {
+            animation: fadeInUp 0.6s ease-out 0.2s backwards;
+        }
+
+        .content-section {
+            background: transparent;
+            border: 1px solid var(--gray-3);
+            border-left: 2px solid var(--blood);
+            padding: 40px;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+
+        .content-section:hover {
+            border-left-color: var(--amber);
+            box-shadow: -3px 0 0 var(--amber), 0 5px 15px rgba(0, 255, 204, 0.1);
+            background: rgba(26, 26, 46, 0.1);
+        }
+
+        .section-header {
+            font-size: 24px;
+            color: var(--amber);
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-header::before {
+            content: '[#]';
+            color: var(--blood);
+            font-size: 20px;
+        }
+
+        .content-section h3 {
+            font-size: 18px;
+            color: var(--cyan);
+            font-weight: 600;
+            margin: 25px 0 15px 0;
+        }
+
+        .content-section p {
+            margin-bottom: 20px;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .content-section ul {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        .content-section li {
+            margin-bottom: 10px;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .content-section li::marker {
+            color: var(--blood);
+        }
+
+        .content-section strong {
+            color: var(--amber);
+            font-weight: 600;
+        }
+
+        .content-section code {
+            background: rgba(157, 0, 255, 0.1);
+            color: var(--amber);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
+        pre {
+            background: var(--gray-1);
+            border: 1px solid var(--gray-3);
+            border-left: 3px solid var(--blood);
+            padding: 20px;
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        pre code {
+            background: none;
+            color: var(--ghost);
+            padding: 0;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .keyword { color: #ff79c6; }
+        .type { color: #8be9fd; }
+        .function { color: #50fa7b; }
+        .string { color: #f1fa8c; }
+        .comment { color: #6272a4; font-style: italic; }
+        .number { color: #bd93f9; }
+        .operator { color: #ff79c6; }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 13px;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid var(--gray-3);
+        }
+
+        .comparison-table th {
+            background: var(--gray-2);
+            color: var(--amber);
+            font-weight: 600;
+        }
+
+        .comparison-table tr:hover {
+            background: rgba(26, 26, 46, 0.3);
+        }
+
+        .post-navigation {
+            display: flex;
+            gap: 20px;
+            margin-top: 60px;
+            animation: fadeInUp 0.6s ease-out 0.4s backwards;
+        }
+
+        .nav-button {
+            flex: 1;
+            background: transparent;
+            border: 1px solid var(--gray-3);
+            padding: 25px;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 204, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .nav-button:hover::before {
+            left: 100%;
+        }
+
+        .nav-button:hover {
+            border-color: var(--amber);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 255, 204, 0.2);
+            background: rgba(26, 26, 46, 0.3);
+        }
+
+        .nav-label {
+            font-size: 10px;
+            color: var(--gray-3);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .nav-title {
+            font-size: 14px;
+            color: var(--ghost);
+            font-weight: 600;
+        }
+
+        .nav-button:hover .nav-title {
+            color: var(--amber);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--blood);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--amber);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 15px;
+            }
+
+            .blog-header {
+                padding: 25px;
+            }
+
+            .blog-title {
+                font-size: 28px;
+            }
+
+            .content-section {
+                padding: 25px;
+            }
+
+            .section-header {
+                font-size: 20px;
+            }
+
+            .post-navigation {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="matrix-bg"></div>
+    
+    <div class="container">
+        <header class="blog-header">
+            <div class="breadcrumb">
+                <a href="index.html">HOME</a> / <span id="category-link"></span> / <span id="post-slug"></span>
+            </div>
+            
+            <h1 class="blog-title" id="post-title">Loading...</h1>
+            
+            <div class="blog-meta">
+                <div class="meta-item">
+                    <i class="fas fa-calendar"></i>
+                    <span id="post-date">Loading...</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-clock"></i>
+                    <span id="post-read-time">15 min read</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-user"></i>
+                    <span>0x06k</span>
+                </div>
+                <span class="category-badge" id="post-category-badge">LOADING</span>
+            </div>
+        </header>
+
+        <article class="blog-content">
+            <section class="content-section">
+                <h2 class="section-header">Introduction</h2>
+                <p>A single process might have dozens of threads, each executing different tasks simultaneously. A thread is the basic unit of CPU utilization. Each thread has its own execution context (registers, stack, instruction pointer) but shares the process's memory space and resources. Windows uses preemptive multitasking to switch between threads based on priority and scheduling algorithms.</p>
+                
+                <p>Key thread properties include: Thread ID (TID), owning Process ID (PID), priority levels, CPU time (user and kernel mode), thread state (running, waiting, suspended), start address, and execution context (registers, stack pointer, instruction pointer).</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Tool Help API (CreateToolhelp32Snapshot)</h2>
+                <p>The most straightforward method for thread enumeration. Creates a snapshot of all threads in the system at a specific moment.</p>
+
+                <h3>How It Works</h3>
+                <p>Uses <code>TH32CS_SNAPTHREAD</code> flag to capture thread information system-wide.</p>
+
+                <pre><code><span class="type">HANDLE</span> snapshot <span class="operator">=</span> <span class="function">CreateToolhelp32Snapshot</span>(<span class="type">TH32CS_SNAPTHREAD</span>, <span class="number">0</span>);
+<span class="keyword">if</span> (snapshot <span class="operator">==</span> <span class="type">INVALID_HANDLE_VALUE</span>) <span class="keyword">return</span> <span class="number">1</span>;
+
+<span class="type">THREADENTRY32</span> te;
+te.dwSize <span class="operator">=</span> <span class="keyword">sizeof</span>(<span class="type">THREADENTRY32</span>);
+
+<span class="keyword">if</span> (<span class="function">Thread32First</span>(snapshot, <span class="operator">&</span>te)) {
+    <span class="keyword">do</span> {
+        <span class="keyword">if</span> (te.th32OwnerProcessID <span class="operator">==</span> targetPID) {
+            <span class="function">printf</span>(<span class="string">"Thread ID: %lu\n"</span>, te.th32ThreadID);
+            <span class="function">printf</span>(<span class="string">"Base Priority: %ld\n"</span>, te.tpBasePri);
+            <span class="function">printf</span>(<span class="string">"Delta Priority: %ld\n"</span>, te.tpDeltaPri);
+        }
+    } <span class="keyword">while</span> (<span class="function">Thread32Next</span>(snapshot, <span class="operator">&</span>te));
+}
+
+<span class="function">CloseHandle</span>(snapshot);</code></pre>
+
+                <p>The <code>THREADENTRY32</code> structure provides thread ID, owning process ID, base priority, and delta priority. This method is simple, well-documented, and works across all modern Windows versions. Perfect for basic thread enumeration when you don't need detailed execution context.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Native API (NtQuerySystemInformation)</h2>
+                <p>The most comprehensive method. Returns detailed information about all threads in all processes in a single call. This is what Task Manager uses internally.</p>
+
+                <h3>How It Works</h3>
+                <p>Queries <code>SystemProcessInformation</code> which includes thread details for each process.</p>
+
+                <pre><code><span class="type">NtQuerySystemInformation_t</span> NtQuerySystemInformation <span class="operator">=</span> 
+    (<span class="type">NtQuerySystemInformation_t</span>)<span class="function">GetProcAddress</span>(
+        <span class="function">GetModuleHandleA</span>(<span class="string">"ntdll.dll"</span>), 
+        <span class="string">"NtQuerySystemInformation"</span>
+    );
+
+<span class="type">ULONG</span> size <span class="operator">=</span> <span class="number">1024</span> <span class="operator">*</span> <span class="number">1024</span> <span class="operator">*</span> <span class="number">2</span>;
+<span class="type">PVOID</span> buffer <span class="operator">=</span> <span class="function">malloc</span>(size);
+
+<span class="type">NTSTATUS</span> status <span class="operator">=</span> <span class="function">NtQuerySystemInformation</span>(
+    <span class="type">SystemProcessInformation</span>,
+    buffer,
+    size,
+    <span class="operator">&</span>returnLength
+);
+
+<span class="type">PSYSTEM_PROCESS_INFORMATION</span> spi <span class="operator">=</span> (<span class="type">PSYSTEM_PROCESS_INFORMATION</span>)buffer;
+<span class="keyword">while</span> (<span class="number">1</span>) {
+    <span class="type">PSYSTEM_THREAD_INFORMATION</span> threads <span class="operator">=</span> 
+        (<span class="type">PSYSTEM_THREAD_INFORMATION</span>)((<span class="type">BYTE</span><span class="operator">*</span>)spi <span class="operator">+</span> <span class="keyword">sizeof</span>(<span class="type">SYSTEM_PROCESS_INFORMATION</span>));
+    
+    <span class="keyword">for</span> (<span class="type">ULONG</span> i <span class="operator">=</span> <span class="number">0</span>; i <span class="operator">&lt;</span> spi<span class="operator">-></span>NumberOfThreads; i<span class="operator">++</span>) {
+        <span class="function">printf</span>(<span class="string">"TID: %llu, State: %u, Priority: %d\n"</span>,
+               (<span class="type">ULONGLONG</span>)threads[i].ClientId.UniqueThread,
+               threads[i].ThreadState,
+               threads[i].Priority);
+    }
+    
+    <span class="keyword">if</span> (spi<span class="operator">-></span>NextEntryOffset <span class="operator">==</span> <span class="number">0</span>) <span class="keyword">break</span>;
+    spi <span class="operator">=</span> (<span class="type">PSYSTEM_PROCESS_INFORMATION</span>)((<span class="type">BYTE</span><span class="operator">*</span>)spi <span class="operator">+</span> spi<span class="operator">-></span>NextEntryOffset);
+}</code></pre>
+
+                <p>Provides comprehensive data: TID, PID, kernel/user CPU time, thread state (running, waiting, etc.), wait reason, priority, base priority, context switches, start address, and creation time. Use this for performance monitoring tools, security software, or when you need complete thread information in one call.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Per-Thread Query (NtQueryInformationThread)</h2>
+                <p>Query detailed information about a specific thread using its handle. More focused than system-wide enumeration.</p>
+
+                <h3>How It Works</h3>
+                <p>Takes a thread handle and returns information based on the requested information class.</p>
+
+                <pre><code><span class="type">NtQueryInformationThread_t</span> NtQueryInformationThread <span class="operator">=</span>
+    (<span class="type">NtQueryInformationThread_t</span>)<span class="function">GetProcAddress</span>(
+        <span class="function">GetModuleHandleA</span>(<span class="string">"ntdll.dll"</span>),
+        <span class="string">"NtQueryInformationThread"</span>
+    );
+
+<span class="type">THREAD_BASIC_INFORMATION</span> tbi;
+<span class="type">NTSTATUS</span> status <span class="operator">=</span> <span class="function">NtQueryInformationThread</span>(
+    hThread,
+    <span class="type">ThreadBasicInformation</span>,
+    <span class="operator">&</span>tbi,
+    <span class="keyword">sizeof</span>(tbi),
+    <span class="type">NULL</span>
+);
+
+<span class="keyword">if</span> (status <span class="operator">==</span> <span class="number">0</span>) {
+    <span class="function">printf</span>(<span class="string">"TEB Address: %p\n"</span>, tbi.TebBaseAddress);
+    <span class="function">printf</span>(<span class="string">"TID: %p\n"</span>, tbi.ClientId.UniqueThread);
+    <span class="function">printf</span>(<span class="string">"Priority: %ld\n"</span>, tbi.Priority);
+    <span class="function">printf</span>(<span class="string">"Affinity Mask: 0x%p\n"</span>, tbi.AffinityMask);
+}</code></pre>
+
+                <p>Returns exit status, TEB (Thread Environment Block) address, client ID (PID/TID), affinity mask, and priority information. Use this when you have a thread handle and need detailed information about that specific thread.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Thread Context Retrieval (GetThreadContext)</h2>
+                <p>Retrieves the CPU register state of a thread. Essential for debugging, code injection, and understanding thread execution state.</p>
+
+                <h3>How It Works</h3>
+                <p>Captures the complete CPU context including general-purpose registers, instruction pointer, stack pointer, and debug registers.</p>
+
+                <pre><code><span class="type">CONTEXT</span> ctx;
+ctx.ContextFlags <span class="operator">=</span> <span class="type">CONTEXT_FULL</span> <span class="operator">|</span> <span class="type">CONTEXT_DEBUG_REGISTERS</span>;
+
+<span class="keyword">if</span> (<span class="function">GetThreadContext</span>(hThread, <span class="operator">&</span>ctx)) {
+<span class="preprocessor">#ifdef _M_X64</span>
+    <span class="function">printf</span>(<span class="string">"RIP: 0x%llX\n"</span>, ctx.Rip);
+    <span class="function">printf</span>(<span class="string">"RSP: 0x%llX\n"</span>, ctx.Rsp);
+    <span class="function">printf</span>(<span class="string">"RAX: 0x%llX\n"</span>, ctx.Rax);
+<span class="preprocessor">#else</span>
+    <span class="function">printf</span>(<span class="string">"EIP: 0x%X\n"</span>, ctx.Eip);
+    <span class="function">printf</span>(<span class="string">"ESP: 0x%X\n"</span>, ctx.Esp);
+    <span class="function">printf</span>(<span class="string">"EAX: 0x%X\n"</span>, ctx.Eax);
+<span class="preprocessor">#endif</span>
+}</code></pre>
+
+                <p>Provides all general-purpose registers, instruction pointer (RIP/EIP), stack pointer (RSP/ESP), flags register, segment registers, and debug registers (Dr0-Dr7). Note: thread must be suspended to get accurate context. Use this for debuggers, thread hijacking, analyzing execution flow, or implementing breakpoints.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Win32 Helper APIs</h2>
+                <p>Simple, focused APIs for specific thread properties. Less comprehensive but easier to use for common tasks.</p>
+
+                <h3>GetThreadId</h3>
+                <pre><code><span class="type">DWORD</span> tid <span class="operator">=</span> <span class="function">GetThreadId</span>(hThread);
+<span class="function">printf</span>(<span class="string">"Thread ID: %lu\n"</span>, tid);</code></pre>
+
+                <h3>GetThreadPriority</h3>
+                <pre><code><span class="type">int</span> priority <span class="operator">=</span> <span class="function">GetThreadPriority</span>(hThread);
+<span class="function">printf</span>(<span class="string">"Priority: %d\n"</span>, priority);</code></pre>
+
+                <h3>GetThreadTimes</h3>
+                <pre><code><span class="type">FILETIME</span> creation, exit, kernel, user;
+<span class="function">GetThreadTimes</span>(hThread, <span class="operator">&</span>creation, <span class="operator">&</span>exit, <span class="operator">&</span>kernel, <span class="operator">&</span>user);
+<span class="function">printf</span>(<span class="string">"Kernel time: %llu\n"</span>, kernel.QuadPart);
+<span class="function">printf</span>(<span class="string">"User time: %llu\n"</span>, user.QuadPart);</code></pre>
+
+                <h3>GetExitCodeThread</h3>
+                <pre><code><span class="type">DWORD</span> exitCode;
+<span class="function">GetExitCodeThread</span>(hThread, <span class="operator">&</span>exitCode);
+<span class="function">printf</span>(<span class="string">"Exit code: %lu\n"</span>, exitCode);</code></pre>
+
+                <p>These APIs are well-documented, stable across Windows versions, and require minimal code. Use them when you only need specific properties and already have a thread handle.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">WOW64 Considerations</h2>
+                <p>When working with 32-bit applications on 64-bit Windows (WOW64), special APIs are needed to access the native 64-bit thread context.</p>
+
+                <h3>Wow64GetThreadContext</h3>
+                <pre><code><span class="type">WOW64_CONTEXT</span> ctx;
+ctx.ContextFlags <span class="operator">=</span> <span class="type">CONTEXT_FULL</span>;
+
+<span class="keyword">if</span> (<span class="function">Wow64GetThreadContext</span>(hThread, <span class="operator">&</span>ctx)) {
+    <span class="function">printf</span>(<span class="string">"x86 EIP: 0x%X\n"</span>, ctx.Eip);
+    <span class="function">printf</span>(<span class="string">"x86 ESP: 0x%X\n"</span>, ctx.Esp);
+}</code></pre>
+
+                <h3>NtWow64QueryInformationThread</h3>
+                <pre><code><span class="type">THREAD_BASIC_INFORMATION64</span> tbi64;
+<span class="type">NTSTATUS</span> status <span class="operator">=</span> <span class="function">NtWow64QueryInformationThread</span>(
+    hThread,
+    <span class="type">ThreadBasicInformation</span>,
+    <span class="operator">&</span>tbi64,
+    <span class="keyword">sizeof</span>(tbi64),
+    <span class="type">NULL</span>
+);
+
+<span class="function">printf</span>(<span class="string">"64-bit TEB: 0x%llX\n"</span>, tbi64.TebBaseAddress);</code></pre>
+
+                <p>Use these when debugging or analyzing 32-bit processes on 64-bit Windows. They provide access to both the 32-bit and 64-bit execution contexts.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Method Comparison</h2>
+                
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Information Provided</th>
+                            <th>Best Use Case</th>
+                            <th>Complexity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>CreateToolhelp32Snapshot</strong></td>
+                            <td>TID, PID, priorities</td>
+                            <td>Simple system-wide thread enumeration</td>
+                            <td>Low</td>
+                        </tr>
+                        <tr>
+                            <td><strong>NtQuerySystemInformation</strong></td>
+                            <td>Everything (state, times, addresses, etc.)</td>
+                            <td>Comprehensive monitoring, security tools</td>
+                            <td>High</td>
+                        </tr>
+                        <tr>
+                            <td><strong>NtQueryInformationThread</strong></td>
+                            <td>TEB, affinity, priorities, client ID</td>
+                            <td>Per-thread detailed information</td>
+                            <td>Medium</td>
+                        </tr>
+                        <tr>
+                            <td><strong>GetThreadContext</strong></td>
+                            <td>CPU registers, IP, SP, debug registers</td>
+                            <td>Debugging, code injection, analysis</td>
+                            <td>Medium</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Win32 Helper APIs</strong></td>
+                            <td>Specific properties (ID, priority, times)</td>
+                            <td>Quick queries for known threads</td>
+                            <td>Very Low</td>
+                        </tr>
+                        <tr>
+                            <td><strong>WOW64 APIs</strong></td>
+                            <td>32-bit and 64-bit contexts</td>
+                            <td>WOW64 process analysis</td>
+                            <td>Medium</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Usage Scenarios</h3>
+                
+                <p><strong>For system-wide enumeration:</strong></p>
+                <ul>
+                    <li><strong>Basic needs:</strong> Use <code>CreateToolhelp32Snapshot</code> - simple and sufficient for most cases</li>
+                    <li><strong>Detailed monitoring:</strong> Use <code>NtQuerySystemInformation</code> - comprehensive but complex</li>
+                </ul>
+
+                <p><strong>For specific thread queries:</strong></p>
+                <ul>
+                    <li><strong>Thread properties:</strong> Use Win32 APIs (<code>GetThreadId</code>, <code>GetThreadPriority</code>, etc.)</li>
+                    <li><strong>Detailed info:</strong> Use <code>NtQueryInformationThread</code></li>
+                    <li><strong>Execution context:</strong> Use <code>GetThreadContext</code></li>
+                </ul>
+
+                <p><strong>For debugging/analysis:</strong></p>
+                <ul>
+                    <li><strong>Register inspection:</strong> <code>GetThreadContext</code></li>
+                    <li><strong>Thread state:</strong> <code>NtQuerySystemInformation</code> for thread states and wait reasons</li>
+                    <li><strong>WOW64 processes:</strong> <code>Wow64GetThreadContext</code> and <code>NtWow64QueryInformationThread</code></li>
+                </ul>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Thread States and Wait Reasons</h2>
+                <p>Understanding thread states is crucial for debugging and performance analysis. Windows threads can be in several states:</p>
+
+                <h3>Thread States</h3>
+                <ul>
+                    <li><strong>Initialized (0):</strong> Thread object created but not yet started</li>
+                    <li><strong>Ready (1):</strong> Ready to execute, waiting for CPU time</li>
+                    <li><strong>Running (2):</strong> Currently executing on a CPU core</li>
+                    <li><strong>Standby (3):</strong> Selected to run next on a specific processor</li>
+                    <li><strong>Terminated (4):</strong> Thread has finished execution</li>
+                    <li><strong>Waiting (5):</strong> Blocked, waiting for a resource or event</li>
+                    <li><strong>Transition (6):</strong> Ready but resources not available (e.g., stack not in memory)</li>
+                    <li><strong>DeferredReady (7):</strong> Ready but waiting for a scheduling decision</li>
+                </ul>
+
+                <h3>Common Wait Reasons</h3>
+                <p>When a thread is in the Waiting state, the wait reason indicates what it's waiting for:</p>
+                <ul>
+                    <li><strong>Executive:</strong> Waiting on an executive resource</li>
+                    <li><strong>DelayExecution:</strong> Thread called Sleep()</li>
+                    <li><strong>Suspended:</strong> Thread is suspended</li>
+                    <li><strong>UserRequest:</strong> Waiting on a user-mode synchronization object</li>
+                    <li><strong>WrLpcReceive/Reply:</strong> Waiting for LPC (Local Procedure Call)</li>
+                    <li><strong>WrQueue:</strong> Waiting on an I/O completion port</li>
+                    <li><strong>WrMutex:</strong> Waiting to acquire a mutex</li>
+                </ul>
+
+                <p>These states and reasons are available through <code>NtQuerySystemInformation</code> in the <code>SYSTEM_THREAD_INFORMATION</code> structure.</p>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">Practical Considerations</h2>
+                
+                <h3>Permissions</h3>
+                <p>Different operations require different access rights:</p>
+                <ul>
+                    <li><code>THREAD_QUERY_INFORMATION</code>: Required for most query operations</li>
+                    <li><code>THREAD_QUERY_LIMITED_INFORMATION</code>: Limited query access (available on Vista+)</li>
+                    <li><code>THREAD_GET_CONTEXT</code>: Required for <code>GetThreadContext</code></li>
+                    <li><code>THREAD_SUSPEND_RESUME</code>: Required to suspend threads before getting context</li>
+                </ul>
+
+                <h3>Thread Suspension</h3>
+                <p>To get an accurate thread context with <code>GetThreadContext</code>, you must first suspend the thread:</p>
+                <pre><code><span class="function">SuspendThread</span>(hThread);
+<span class="function">GetThreadContext</span>(hThread, <span class="operator">&</span>ctx);
+<span class="comment">// Analyze context...</span>
+<span class="function">ResumeThread</span>(hThread);</code></pre>
+
+                <h3>Error Handling</h3>
+                <p>Always check return values:</p>
+                <ul>
+                    <li><code>INVALID_HANDLE_VALUE</code> from snapshot creation</li>
+                    <li><code>ERROR_NO_MORE_FILES</code> when enumeration completes</li>
+                    <li><code>STATUS_INFO_LENGTH_MISMATCH</code> for Native API buffer sizes</li>
+                    <li><code>ERROR_ACCESS_DENIED</code> for protected threads</li>
+                </ul>
+
+                <h3>Architecture Considerations</h3>
+                <ul>
+                    <li>32-bit processes cannot access 64-bit thread contexts directly</li>
+                    <li>Use WOW64 APIs when working with 32-bit processes on 64-bit Windows</li>
+                    <li>Register sizes differ: EAX/EIP (32-bit) vs RAX/RIP (64-bit)</li>
+                    <li>Some system threads are protected and will deny access</li>
+                </ul>
+            </section>
+            <section class="content-section">
+                <h2 class="section-header">References</h2>
+                <div class="breadcrumb">
+                    <ul>
+                        <li><a href="https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-createtoolhelp32snapshot" style="color: var(--amber); text-decoration: none;">CreateToolhelp32Snapshot - Microsoft Docs</a></li>
+                        <li><a href="https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getthreadcontext" style="color: var(--amber); text-decoration: none;">GetThreadContext - Microsoft Docs</a></li>
+                        <li><a href="http://undocumented.ntinternals.net/" style="color: var(--amber); text-decoration: none;">NtQuerySystemInformation - Undocumented NT</a></li>
+                        <li><a href="https://github.com/0x06k/Ring-3-to-Ring-0" style="color: var(--amber); text-decoration: none;">Github Code Repo</a></li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="content-section">
+                <h2 class="section-header">What's Next</h2>
+                <p>And with thread enumeration i think i have already got the basic idea of Process Enumeration. So there will be no more posts about enumeration.</p>
+            </section>
+        </article>
+
+        <nav class="post-navigation">
+            <a href="windows-internel-post4.html" class="nav-button">
+                <span class="nav-label">← Previous Post</span>
+                <span class="nav-title">Module Enumeration in Windows</span>
+            </a>
+            <a href="#" class="nav-button">
+                <span class="nav-label">Next Post →</span>
+                <span class="nav-title">No post yet, coming soon.</span>
+            </a>
+        </nav>
+    </div>
+    <script src="posts.js"></script>
+    <script>
+        const POST_CONFIG = {
+            id: 'thread-enumeration-windows',
+            category: 'maldev',
+            title: 'Thread Enumeration in Windows: A Complete Guide',
+            date: 'December 31, 2025',
+            readTime: '15 min read'
+        };
+
+        const categoriesInfo = categoryInfo;
+
+        function initializePage() {
+            const category = POST_CONFIG.category;
+            const categoryData = categoriesInfo[category];
+            
+            if (!categoryData) {
+                console.error('Invalid category:', category);
+                return;
+            }
+
+            const categoryLink = document.getElementById('category-link');
+            const categoryUrl = `category.html?category=${category}`;
+            categoryLink.innerHTML = `<a href="${categoryUrl}">${categoryData.title.toUpperCase()}</a>`;
+            
+            const slug = POST_CONFIG.title
+                .toUpperCase()
+                .replace(/[^A-Z0-9\s]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .split(' ')
+                .slice(0, 3)
+                .join(' ');
+            document.getElementById('post-slug').textContent = slug;
+
+            document.getElementById('post-title').textContent = POST_CONFIG.title;
+            document.getElementById('post-date').textContent = POST_CONFIG.date;
+            document.getElementById('post-read-time').textContent = POST_CONFIG.readTime;
+            
+            const badge = document.getElementById('post-category-badge');
+            badge.textContent = categoryData.title.toUpperCase();
+            badge.className = `category-badge ${category}`;
+            
+            document.title = `${POST_CONFIG.title} // 0x06k`;
+        }
+
+        initializePage();
+    </script>
+</body>
+</html>
